@@ -6,7 +6,6 @@ name: benevo-plus
 services:
   app:
     build: .
-    image: benevo-plus:latest
     container_name: benevo-plus
     restart: unless-stopped
     depends_on:
