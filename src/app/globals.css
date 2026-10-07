@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --nuit: #14213d;
+  --or: #c9a227;
+  --creme: #fbf7ef;
+}
+
+html,
+body {
+  background: var(--creme);
+  color: var(--nuit);
+}
+
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 font-semibold transition;
+}
+.btn-primary {
+  @apply btn bg-[#14213d] text-white hover:opacity-90;
+}
+.btn-or {
+  @apply btn bg-[#c9a227] text-[#14213d] hover:opacity-90;
+}
+.card {
+  @apply rounded-2xl bg-white p-5 shadow-md;
+}
