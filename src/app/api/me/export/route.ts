@@ -1,0 +1,2 @@
+import { NextResponse } from 'next/server'; import { auth } from '@/auth'; import { prisma } from '@/lib/prisma';
+export async function GET(){const s=await auth();if(!s?.user?.id)return NextResponse.json({error:'Non autorisé'},{status:401});const data=await prisma.user.findUnique({where:{id:s.user.id},include:{memberships:{include:{community:true}},needsCreated:true,commitments:true,swipes:true,badges:true}});return NextResponse.json(data,{headers:{'Content-Disposition':'attachment; filename="benevo-mes-donnees.json"'}})}
