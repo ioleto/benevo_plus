@@ -32,7 +32,7 @@ export async function acceptTerms(formData: FormData) {
 export async function swipe(needId: string, direction: 'LEFT' | 'RIGHT') {
   const user = await requireUser();
   const need = await prisma.need.findFirst({ where: { id: needId, status: 'PUBLISHED' } });
-  if (!need) return { ok: false };
+  if (!need) return;
   await prisma.swipe.upsert({
     where: { userId_needId: { userId: user.id, needId } },
     update: { direction },
@@ -40,7 +40,7 @@ export async function swipe(needId: string, direction: 'LEFT' | 'RIGHT') {
   });
   if (direction === 'RIGHT') {
     const taken = await prisma.commitment.count({ where: { needId } });
-    if (taken >= need.slots) return { ok: false, full: true };
+    if (taken >= need.slots) return;
     await prisma.commitment.upsert({
       where: { userId_needId: { userId: user.id, needId } },
       update: {},
@@ -49,7 +49,6 @@ export async function swipe(needId: string, direction: 'LEFT' | 'RIGHT') {
     await awardBadge(user.id, 'FIRST_YES');
   }
   revalidatePath('/app/mes-engagements');
-  return { ok: true };
 }
 
 export async function withdraw(needId: string) {
@@ -72,7 +71,6 @@ export async function createNeed(formData: FormData) {
     });
     if (!member) redirect('/app/besoins/nouveau?erreur=communaute');
     communityId = d.communityId;
-    // Validation requise dans une communauté, sauf si l'auteur en est responsable
     status = member.role === 'MEMBER' ? 'PENDING' : 'PUBLISHED';
   }
   await prisma.need.create({
