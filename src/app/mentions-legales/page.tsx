@@ -15,10 +15,10 @@ export default function MentionsLegales() {
       <h2 className="text-xl font-semibold">Directeur de la publication</h2>
       <p>Eloi TOURANGIN.</p>
       <h2 className="text-xl font-semibold">Hébergement</h2>
-      <p>Le service est auto-hébergé par l'éditeur sur ses propres serveurs, à l'adresse ci-dessus.</p>
+      <p>Le service est auto-hébergé par l’éditeur sur ses propres serveurs, à l’adresse ci-dessus.</p>
       <h2 className="text-xl font-semibold">Propriété intellectuelle</h2>
       <p>
-        Les éléments du site (marque, logo, textes, code) sont la propriété de l'éditeur. Les contenus publiés par les
+        Les éléments du site (marque, logo, textes, code) sont la propriété de l’éditeur. Les contenus publiés par les
         utilisateurs restent sous leur responsabilité.
       </p>
     </article>

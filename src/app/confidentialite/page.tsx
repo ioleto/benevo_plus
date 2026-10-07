@@ -17,13 +17,13 @@ export default function Confidentialite() {
       <h2 className="text-xl font-semibold">Finalités et bases légales</h2>
       <p>Fourniture du service (exécution des CGU), sécurité et modération (intérêt légitime), données sensibles (consentement explicite).</p>
       <h2 className="text-xl font-semibold">Destinataires</h2>
-      <p>Les données ne sont ni vendues ni cédées. Seuls les autres utilisateurs concernés voient les informations nécessaires à la mise en relation. Google intervient uniquement pour l'authentification.</p>
+      <p>Les données ne sont ni vendues ni cédées. Seuls les autres utilisateurs concernés voient les informations nécessaires à la mise en relation. Google intervient uniquement pour l’authentification.</p>
       <h2 className="text-xl font-semibold">Durée de conservation</h2>
-      <p>Jusqu'à la suppression du compte, puis suppression définitive sous 30 jours. Les comptes inactifs depuis 3 ans sont supprimés après avertissement.</p>
+      <p>Jusqu’à la suppression du compte, puis suppression définitive sous 30 jours. Les comptes inactifs depuis 3 ans sont supprimés après avertissement.</p>
       <h2 className="text-xl font-semibold">Vos droits</h2>
       <p>Accès, rectification, effacement, portabilité (export depuis votre profil), opposition, limitation et retrait du consentement : écrivez à contact@ioleto.fr. Vous pouvez saisir la CNIL (www.cnil.fr).</p>
       <h2 className="text-xl font-semibold">Hébergement</h2>
-      <p>Les données sont hébergées en France sur les serveurs de l'éditeur.</p>
+      <p>Les données sont hébergées en France sur les serveurs de l’éditeur.</p>
     </article>
   );
 }
