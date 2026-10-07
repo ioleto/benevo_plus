@@ -1,21 +1,183 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
-datasource db { provider = "postgresql" url = env("DATABASE_URL") }
-enum Role { USER ADMIN }
-enum MemberRole { MEMBER MANAGER OWNER }
-enum NeedStatus { PENDING PUBLISHED REJECTED DONE CANCELLED }
-enum SwipeDirection { LEFT RIGHT }
-enum CommunityVisibility { PUBLIC PRIVATE }
-model User { id String @id @default(cuid()) name String? email String? @unique emailVerified DateTime? image String? role Role @default(USER) bio String? @db.VarChar(280) city String? @db.VarChar(80) points Int @default(0) showOnLeaderboard Boolean @default(false) termsAcceptedAt DateTime? sensitiveConsentAt DateTime? createdAt DateTime @default(now()) updatedAt DateTime @updatedAt accounts Account[] sessions Session[] memberships Membership[] needsCreated Need[] @relation("NeedAuthor") commitments Commitment[] swipes Swipe[] badges UserBadge[] }
-model Account { userId String type String provider String providerAccountId String refresh_token String? @db.Text access_token String? @db.Text expires_at Int? token_type String? scope String? id_token String? @db.Text session_state String? createdAt DateTime @default(now()) updatedAt DateTime @updatedAt user User @relation(fields: [userId], references: [id], onDelete: Cascade) @@id([provider, providerAccountId]) }
-model Session { sessionToken String @unique userId String expires DateTime user User @relation(fields: [userId], references: [id], onDelete: Cascade) createdAt DateTime @default(now()) updatedAt DateTime @updatedAt }
-model VerificationToken { identifier String token String expires DateTime @@id([identifier, token]) }
-model Community { id String @id @default(cuid()) name String @db.VarChar(100) slug String @unique description String? @db.VarChar(1000) city String? @db.VarChar(80) inviteCode String @unique @default(cuid()) visibility CommunityVisibility @default(PUBLIC) accessCodeRequired Boolean @default(false) memberApprovalRequired Boolean @default(false) createdAt DateTime @default(now()) members Membership[] needs Need[] }
-model Membership { id String @id @default(cuid()) userId String communityId String role MemberRole @default(MEMBER) approved Boolean @default(true) joinedAt DateTime @default(now()) user User @relation(fields: [userId], references: [id], onDelete: Cascade) community Community @relation(fields: [communityId], references: [id], onDelete: Cascade) @@unique([userId, communityId]) }
-model Need { id String @id @default(cuid()) title String @db.VarChar(120) description String @db.VarChar(2000) category String @db.VarChar(40) city String? @db.VarChar(80) startsAt DateTime? slots Int @default(1) points Int @default(10) status NeedStatus @default(PENDING) authorId String communityId String? reviewedById String? createdAt DateTime @default(now()) updatedAt DateTime @updatedAt author User @relation("NeedAuthor", fields: [authorId], references: [id], onDelete: Cascade) community Community? @relation(fields: [communityId], references: [id], onDelete: Cascade) commitments Commitment[] swipes Swipe[] @@index([status, communityId]) }
-model Commitment { id String @id @default(cuid()) userId String needId String completedAt DateTime? createdAt DateTime @default(now()) user User @relation(fields: [userId], references: [id], onDelete: Cascade) need Need @relation(fields: [needId], references: [id], onDelete: Cascade) @@unique([userId, needId]) }
-model Swipe { id String @id @default(cuid()) userId String needId String direction SwipeDirection createdAt DateTime @default(now()) user User @relation(fields: [userId], references: [id], onDelete: Cascade) need Need @relation(fields: [needId], references: [id], onDelete: Cascade) @@unique([userId, needId]) }
-model UserBadge { id String @id @default(cuid()) userId String badge String earnedAt DateTime @default(now()) user User @relation(fields: [userId], references: [id], onDelete: Cascade) @@unique([userId, badge]) }
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum MemberRole {
+  MEMBER
+  MANAGER
+  OWNER
+}
+
+enum NeedStatus {
+  PENDING
+  PUBLISHED
+  REJECTED
+  DONE
+  CANCELLED
+}
+
+enum SwipeDirection {
+  LEFT
+  RIGHT
+}
+
+enum CommunityVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+model User {
+  id                 String       @id @default(cuid())
+  name               String?
+  email              String?      @unique
+  emailVerified      DateTime?
+  image              String?
+  role               Role         @default(USER)
+  bio                String?      @db.VarChar(280)
+  city               String?      @db.VarChar(80)
+  points             Int          @default(0)
+  showOnLeaderboard  Boolean      @default(false)
+  termsAcceptedAt    DateTime?
+  sensitiveConsentAt DateTime?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  accounts           Account[]
+  sessions           Session[]
+  memberships        Membership[]
+  needsCreated       Need[]       @relation("NeedAuthor")
+  commitments        Commitment[]
+  swipes             Swipe[]
+  badges             UserBadge[]
+}
+
+model Account {
+  userId             String   
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?
+  access_token       String?  @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?  @db.Text
+  session_state      String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+model Community {
+  id                    String             @id @default(cuid())
+  name                  String             @db.VarChar(100)
+  slug                  String             @unique
+  description           String?            @db.VarChar(1000)
+  city                  String?            @db.VarChar(80)
+  inviteCode            String             @unique @default(cuid())
+  visibility            CommunityVisibility @default(PUBLIC)
+  accessCodeRequired    Boolean            @default(false)
+  memberApprovalRequired Boolean           @default(false)
+  createdAt             DateTime           @default(now())
+  members               Membership[]
+  needs                 Need[]
+}
+
+model Membership {
+  id          String    @id @default(cuid())
+  userId      String
+  communityId String
+  role        MemberRole @default(MEMBER)
+  approved    Boolean   @default(true)
+  joinedAt    DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, communityId])
+}
+
+model Need {
+  id           String       @id @default(cuid())
+  title        String       @db.VarChar(120)
+  description  String       @db.VarChar(2000)
+  category     String       @db.VarChar(40)
+  city         String?      @db.VarChar(80)
+  startsAt     DateTime?
+  slots        Int          @default(1)
+  points       Int          @default(10)
+  status       NeedStatus   @default(PENDING)
+  authorId     String
+  communityId  String?
+  reviewedById String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  author       User         @relation("NeedAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  community    Community?   @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  commitments  Commitment[]
+  swipes       Swipe[]
+
+  @@index([status, communityId])
+}
+
+model Commitment {
+  id          String    @id @default(cuid())
+  userId      String
+  needId      String
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  need        Need      @relation(fields: [needId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, needId])
+}
+
+model Swipe {
+  id         String        @id @default(cuid())
+  userId     String
+  needId     String
+  direction  SwipeDirection
+  createdAt  DateTime      @default(now())
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  need       Need          @relation(fields: [needId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, needId])
+}
+
+model UserBadge {
+  id        String   @id @default(cuid())
+  userId    String
+  badge     String
+  earnedAt  DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badge])
+}
