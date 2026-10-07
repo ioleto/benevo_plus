@@ -1,0 +1,52 @@
+# Stack Portainer : Stacks > Add stack > Repository
+# URL : https://github.com/ioleto/benevo_plus — Compose path : docker-compose.yml
+# Variables à définir dans Portainer : voir .env.example
+name: benevo-plus
+
+services:
+  app:
+    build: .
+    image: benevo-plus:latest
+    container_name: benevo-plus
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      AUTH_URL: ${AUTH_URL:-https://benevo.ioleto.fr}
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET requis}
+      AUTH_TRUST_HOST: "true"
+      AUTH_GOOGLE_ID: ${AUTH_GOOGLE_ID:?AUTH_GOOGLE_ID requis}
+      AUTH_GOOGLE_SECRET: ${AUTH_GOOGLE_SECRET:?AUTH_GOOGLE_SECRET requis}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?ADMIN_EMAIL requis}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-benevo}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requis}@db:5432/${POSTGRES_DB:-benevo}?schema=public
+    networks:
+      - internal
+      - swag
+
+  db:
+    image: postgres:16-alpine
+    container_name: benevo-plus-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-benevo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requis}
+      POSTGRES_DB: ${POSTGRES_DB:-benevo}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+
+volumes:
+  db-data:
+
+networks:
+  internal:
+  swag:
+    external: true
+    name: ${NETWORK_NAME:?NETWORK_NAME requis}
