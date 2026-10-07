@@ -1,0 +1,14 @@
+{
+  "name": "Bénévo+",
+  "short_name": "Bénévo+",
+  "description": "Rendre service, simplement.",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fbf7ef",
+  "theme_color": "#14213d",
+  "lang": "fr",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
