@@ -5,7 +5,7 @@ import { auth } from '@/auth';
 export async function requireUser() {
   const session = await auth();
   if (!session?.user) redirect('/connexion');
-  if (!session.user.onboarded) redirect('/bienvenue');
+  if (!session.user.onboarded) redirect('/app/bienvenue');
   return session.user;
 }
 

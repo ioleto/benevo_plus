@@ -17,7 +17,7 @@ async function isManager(userId: string, communityId: string) {
 export async function acceptTerms(formData: FormData) {
   const session = await auth();
   if (!session?.user) redirect('/connexion');
-  if (formData.get('terms') !== 'on') redirect('/bienvenue?erreur=cgu');
+  if (formData.get('terms') !== 'on') redirect('/app/bienvenue?erreur=cgu');
   await prisma.user.update({
     where: { id: session.user.id },
     data: {

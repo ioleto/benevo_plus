@@ -3,6 +3,21 @@ import Google from 'next-auth/providers/google';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
 
+function normalizeBaseUrl(value: string | undefined) {
+  if (!value) return value;
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+  const withProtocol = /^[a-z][a-z\d+.-]*:\/\//i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed}`;
+  return withProtocol.replace(/\/+$/, '');
+}
+
+for (const key of ['AUTH_URL', 'NEXTAUTH_URL'] as const) {
+  const normalized = normalizeBaseUrl(process.env[key]);
+  if (normalized) process.env[key] = normalized;
+}
+
 const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase().trim();
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
