@@ -1,40 +1,8 @@
 import { z } from 'zod';
 
-export const CATEGORIES = [
-  'Liturgie',
-  'Accueil',
-  'Ménage & entretien',
-  'Bricolage',
-  'Cuisine & repas',
-  'Transport',
-  'Solidarité',
-  'Enfants & catéchèse',
-  'Musique & chant',
-  'Autre',
-] as const;
-
-export const needSchema = z.object({
-  title: z.string().trim().min(4).max(120),
-  description: z.string().trim().min(10).max(2000),
-  category: z.enum(CATEGORIES),
-  city: z.string().trim().max(80).optional().or(z.literal('')),
-  startsAt: z.string().optional().or(z.literal('')),
-  slots: z.coerce.number().int().min(1).max(50),
-  communityId: z.string().optional().or(z.literal('')),
-});
-
-export const communitySchema = z.object({
-  name: z.string().trim().min(3).max(100),
-  description: z.string().trim().max(1000).optional().or(z.literal('')),
-  city: z.string().trim().max(80).optional().or(z.literal('')),
-});
-
-export function slugify(input: string) {
-  return input
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '')
-    .slice(0, 60);
-}
+export const CATEGORIES = ['Liturgie','Accueil','Ménage & entretien','Bricolage','Cuisine & repas','Transport','Solidarité','Enfants & catéchèse','Musique & chant','Autre'] as const;
+export const needSchema = z.object({ title:z.string().trim().min(4).max(120), description:z.string().trim().min(10).max(2000), category:z.enum(CATEGORIES), city:z.string().trim().max(80).optional().or(z.literal('')), startsAt:z.string().optional().or(z.literal('')), slots:z.coerce.number().int().min(1).max(50), communityId:z.string().optional().or(z.literal('')), isRecurring:z.coerce.boolean().default(false), recurrence:z.enum(['DAILY','WEEKLY','BIWEEKLY','MONTHLY']).optional().or(z.literal('')), recurrenceEndsAt:z.string().optional().or(z.literal('')), minVolunteers:z.coerce.number().int().min(0).max(50).optional(), maxVolunteers:z.coerce.number().int().min(1).max(50).optional() }).refine(d=>d.minVolunteers===undefined||d.maxVolunteers===undefined||d.minVolunteers<=d.maxVolunteers,{message:'min<=max'});
+export const profileSchema=z.object({firstName:z.string().trim().max(80).optional().or(z.literal('')),lastName:z.string().trim().max(80).optional().or(z.literal('')),bio:z.string().trim().max(280).optional().or(z.literal('')),city:z.string().trim().max(80).optional().or(z.literal('')),leaderboard:z.coerce.boolean().default(false)});
+export const messageSchema=z.object({content:z.string().trim().min(1).max(2000)});
+export const communitySchema=z.object({name:z.string().trim().min(3).max(100),description:z.string().trim().max(1000).optional().or(z.literal('')),city:z.string().trim().max(80).optional().or(z.literal(''))});
+export function slugify(input:string){return input.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'').slice(0,60)}
