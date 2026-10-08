@@ -1,13 +1,16 @@
 'use client';
 
+import type { ReactNode } from 'react';
+
 type ConfirmSubmitButtonProps = {
   message: string;
-  children: React.ReactNode;
+  children: ReactNode;
+  className?: string;
 };
 
-export default function ConfirmSubmitButton({ message, children }: ConfirmSubmitButtonProps) {
+export default function ConfirmSubmitButton({ message, children, className }: ConfirmSubmitButtonProps) {
   return (
-    <button type="submit" onClick={(e) => { if (!confirm(message)) e.preventDefault(); }}>
+    <button type="submit" className={className} onClick={(e) => { if (!confirm(message)) e.preventDefault(); }}>
       {children}
     </button>
   );
