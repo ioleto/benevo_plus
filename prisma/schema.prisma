@@ -37,6 +37,14 @@ enum CommunityVisibility {
   PRIVATE
 }
 
+enum Recurrence {
+  NONE
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
 model User {
   id                 String       @id @default(cuid())
   name               String?
@@ -61,12 +69,13 @@ model User {
   commitments        Commitment[]
   swipes             Swipe[]
   badges             UserBadge[]
+  messages           Message[]
 }
 
 model Account {
   userId             String   
   type               String
-  provider           String
+  provider            String
   providerAccountId  String
   refresh_token      String?
   access_token       String?  @db.Text
@@ -74,9 +83,9 @@ model Account {
   token_type         String?
   scope              String?
   id_token           String?  @db.Text
-  session_state      String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  session_state       String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([provider, providerAccountId])
@@ -135,6 +144,9 @@ model Need {
   city         String?      @db.VarChar(80)
   startsAt     DateTime?
   slots        Int          @default(1)
+  minSlots     Int?
+  recurrence   Recurrence   @default(NONE)
+  recurrenceEnd DateTime?
   points       Int          @default(10)
   status       NeedStatus   @default(PENDING)
   authorId     String
@@ -145,9 +157,21 @@ model Need {
   author       User         @relation("NeedAuthor", fields: [authorId], references: [id], onDelete: Cascade)
   community    Community?   @relation(fields: [communityId], references: [id], onDelete: Cascade)
   commitments  Commitment[]
+  messages     Message[]
   swipes       Swipe[]
 
   @@index([status, communityId])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  needId    String
+  authorId  String
+  content   String   @db.VarChar(2000)
+  createdAt DateTime @default(now())
+  need      Need     @relation(fields: [needId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  @@index([needId, createdAt])
 }
 
 model Commitment {
