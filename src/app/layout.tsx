@@ -1,10 +1,8 @@
-/* eslint-disable @next/next/no-img-element */
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { auth } from "@/auth";
 import "./globals.css";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
-import UserMenu from "@/components/UserMenu";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: { default: "Bénévo+", template: "%s · Bénévo+" }, description: "Bénévo+ relie les personnes qui ont besoin d'un coup de main et les bénévoles.", manifest: "/manifest.webmanifest", applicationName: "Bénévo+", appleWebApp: { capable: true, title: "Bénévo+", statusBarStyle: "default" }, icons: { icon: "/icon.svg", apple: "/icon.svg" } };
