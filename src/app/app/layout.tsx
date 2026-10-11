@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { logout } from '@/server/actions';
+import UserMenu from '@/components/UserMenu';
 
 const navigation = [
   { href: '/app', label: 'Accueil' },
@@ -24,22 +24,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </Link>
             ))}
           </nav>
-          <details className="relative">
-            <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full bg-white px-3 py-2 text-sm font-semibold text-[#14213d] shadow-sm outline-none ring-[#c9a227] transition hover:shadow-md focus-visible:ring-2">
-              <span className="grid h-7 w-7 place-items-center rounded-full bg-[#14213d] text-xs text-white" aria-hidden="true">♡</span>
-              <span className="hidden sm:inline">Mon espace</span>
-              <span aria-hidden="true">⌄</span>
-            </summary>
-            <div className="absolute right-0 mt-2 w-52 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
-              <Link href="/app/profil" className="menu-link">Mon profil</Link>
-              <Link href="/app/mes-engagements" className="menu-link">Mes engagements</Link>
-              <Link href="/app/mes-besoins" className="menu-link">Mes besoins</Link>
-              <Link href="/app/discussions" className="menu-link">Mes discussions</Link>
-              <form action={logout} className="mt-1 border-t border-slate-100 pt-1">
-                <button className="menu-link w-full text-left text-red-700" type="submit">Se déconnecter</button>
-              </form>
-            </div>
-          </details>
+          <UserMenu />
         </div>
       </header>
       <main className="mx-auto max-w-6xl">{children}</main>
