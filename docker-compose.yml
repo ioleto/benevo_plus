@@ -2,7 +2,6 @@
 # URL : https://github.com/ioleto/benevo_plus — Compose path : docker-compose.yml
 # Variables à définir dans Portainer : voir .env.example
 name: benevo-plus
-
 services:
   app:
     build: .
@@ -22,7 +21,6 @@ services:
     networks:
       - internal
       - swag
-
   db:
     image: postgres:16-alpine
     container_name: benevo-plus-db
@@ -40,10 +38,8 @@ services:
       retries: 5
     networks:
       - internal
-
 volumes:
   db-data:
-
 networks:
   internal:
   swag:
