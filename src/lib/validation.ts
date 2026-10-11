@@ -12,6 +12,6 @@ export const needSchema = z.object({
   minSlots: z.coerce.number().int().min(1).max(50).optional().or(z.literal('')),
   recurrence: z.enum(['NONE', 'DAILY', 'WEEKLY', 'BIWEEKLY', 'MONTHLY']).default('NONE'),
   recurrenceEnd: z.string().optional().or(z.literal('')), communityId: z.string().optional().or(z.literal('')),
-});
+}).refine((value) => !value.minSlots || Number(value.minSlots) <= value.slots, { path: ['minSlots'], message: 'Le minimum ne peut pas dépasser le maximum' });
 export const communitySchema = z.object({ name: z.string().trim().min(3).max(100), description: z.string().trim().max(1000).optional().or(z.literal('')), city: z.string().trim().max(80).optional().or(z.literal('')) });
 export function slugify(input: string) { return input.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 60); }

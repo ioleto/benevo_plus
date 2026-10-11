@@ -1,3 +1,5 @@
+'use server';
+
 import { revalidatePath } from 'next/cache';
 import crypto from 'node:crypto';
 import { z } from 'zod';
@@ -10,7 +12,24 @@ import { awardBadge } from '@/server/badges';
 
 async function isManager(userId: string, communityId: string) { const m = await prisma.membership.findUnique({ where: { userId_communityId: { userId, communityId } } }); return m?.role === 'MANAGER' || m?.role === 'OWNER'; }
 export async function acceptTerms(formData: FormData) { const session = await auth(); if (!session?.user) redirect('/connexion'); if (formData.get('terms') !== 'on') redirect('/app/bienvenue?erreur=cgu'); await prisma.user.update({ where: { id: session.user.id }, data: { termsAcceptedAt: new Date(), sensitiveConsentAt: formData.get('sensitive') === 'on' ? new Date() : null } }); redirect('/app'); }
-export async function swipe(needId: string, direction: 'LEFT' | 'RIGHT') { const user = await requireUser(); const need = await prisma.need.findFirst({ where: { id: needId, status: 'PUBLISHED' } }); if (!need) return; await prisma.swipe.upsert({ where: { userId_needId: { userId: user.id, needId } }, update: { direction }, create: { userId: user.id, needId, direction } }); if (direction === 'RIGHT') { const taken = await prisma.commitment.count({ where: { needId } }); if (taken >= need.slots) return; await prisma.commitment.upsert({ where: { userId_needId: { userId: user.id, needId } }, update: {}, create: { userId: user.id, needId } }); await awardBadge(user.id, 'FIRST_YES'); } revalidatePath('/app/mes-engagements'); revalidatePath('/app'); }
+export async function swipe(needId: string, direction: 'LEFT' | 'RIGHT') {
+  const user = await requireUser();
+  const need = await prisma.need.findFirst({ where: { id: needId, status: 'PUBLISHED' } });
+  if (!need || need.authorId === user.id) return;
+  await prisma.swipe.upsert({ where: { userId_needId: { userId: user.id, needId } }, update: { direction }, create: { userId: user.id, needId, direction } });
+  if (direction === 'RIGHT') {
+    const existing = await prisma.commitment.findUnique({ where: { userId_needId: { userId: user.id, needId } } });
+    if (!existing) {
+      const taken = await prisma.commitment.count({ where: { needId } });
+      if (taken >= need.slots) return;
+      try { await prisma.commitment.create({ data: { userId: user.id, needId } }); } catch (error) {
+        if (!(error instanceof Error) || !('code' in error) || (error as { code?: string }).code !== 'P2002') throw error;
+      }
+      await awardBadge(user.id, 'FIRST_YES');
+    }
+  }
+  revalidatePath('/app/mes-engagements'); revalidatePath('/app'); revalidatePath(`/app/besoins/${needId}`);
+}
 export async function withdraw(needId: string) { const user = await requireUser(); await prisma.commitment.deleteMany({ where: { userId: user.id, needId, completedAt: null } }); revalidatePath('/app/mes-engagements'); }
 export async function createNeed(formData: FormData) { const user = await requireUser(); const parsed = needSchema.safeParse(Object.fromEntries(formData)); if (!parsed.success) redirect('/app/besoins/nouveau?erreur=formulaire'); const d = parsed.data; let communityId: string | null = null; let status: 'PUBLISHED' | 'PENDING' = 'PUBLISHED'; if (d.communityId) { const member = await prisma.membership.findUnique({ where: { userId_communityId: { userId: user.id, communityId: d.communityId } } }); if (!member) redirect('/app/besoins/nouveau?erreur=communaute'); communityId = d.communityId; status = member.role === 'MEMBER' ? 'PENDING' : 'PUBLISHED'; } await prisma.need.create({ data: { title:d.title, description:d.description, category:d.category, city:d.city||null, startsAt:d.startsAt?new Date(d.startsAt):null, slots:d.slots, minSlots:d.minSlots?Number(d.minSlots):null, recurrence:d.recurrence, recurrenceEnd:d.recurrenceEnd?new Date(d.recurrenceEnd):null, authorId:user.id, communityId, status } }); await awardBadge(user.id, 'ASKER'); redirect(`/app/mes-besoins?cree=${status === 'PENDING' ? 'attente' : 'publie'}`); }
 export async function reviewNeed(needId: string, approve: boolean) { const user = await requireUser(); const need = await prisma.need.findUnique({ where: { id: needId } }); if (!need?.communityId) return; if (user.role !== 'ADMIN' && !(await isManager(user.id, need.communityId))) return; await prisma.need.update({ where: { id: needId }, data: { status: approve ? 'PUBLISHED' : 'REJECTED', reviewedById: user.id } }); revalidatePath('/app/communautes'); }
@@ -27,8 +46,15 @@ async function requireCommunityManager(communityId: string) { const user = await
 export async function updateCommunity(communityId: string, formData: FormData) { await requireCommunityManager(communityId); const parsed = communitySchema.extend({ visibility: z.enum(['PUBLIC','PRIVATE']), accessCodeRequired: z.coerce.boolean().default(false), memberApprovalRequired: z.coerce.boolean().default(false) }).safeParse(Object.fromEntries(formData)); if (!parsed.success) return; await prisma.community.update({ where: { id: communityId }, data: { name: parsed.data.name, description: parsed.data.description || null, city: parsed.data.city || null, visibility: parsed.data.visibility, accessCodeRequired: parsed.data.accessCodeRequired, memberApprovalRequired: parsed.data.memberApprovalRequired } }); revalidatePath(`/app/communautes/${communityId}`); revalidatePath(`/app/communautes/${communityId}/parametres`); }
 export async function regenerateCommunityCode(communityId: string) { await requireCommunityManager(communityId); await prisma.community.update({ where: { id: communityId }, data: { inviteCode: crypto.randomUUID() } }); revalidatePath(`/app/communautes/${communityId}/parametres`); }
 export async function approveMember(membershipId: string) { const m = await prisma.membership.findUniqueOrThrow({ where: { id: membershipId } }); await requireCommunityManager(m.communityId); await prisma.membership.update({ where: { id: membershipId }, data: { approved: true } }); revalidatePath(`/app/communautes/${m.communityId}/parametres`); }
-export async function removeMember(membershipId: string) { const m = await prisma.membership.findUniqueOrThrow({ where: { id: membershipId } }); await requireCommunityManager(m.communityId); if (m.role !== 'OWNER') await prisma.membership.delete({ where: { id: membershipId } }); revalidatePath(`/app/communautes/${m.communityId}/parametres`); }
+export async function removeMember(membershipId: string) { const m = await prisma.membership.findUniqueOrThrow({ where: { id: membershipId } }); await requireCommunityManager(m.communityId); if (m.role !== 'OWNER') await prisma.membership.delete({ where: { id: m.id } }); revalidatePath(`/app/communautes/${m.communityId}/parametres`); }
 export async function deleteCommunity(communityId: string) { const user = await requireUser(); const m = await prisma.membership.findUnique({ where: { userId_communityId: { userId: user.id, communityId } } }); if (!m || (m.role !== 'OWNER' && user.role !== 'ADMIN')) throw new Error('Accès non autorisé'); await prisma.community.delete({ where: { id: communityId } }); redirect('/app/communautes'); }
-async function canDiscuss(userId: string, needId: string) { const need = await prisma.need.findUnique({ where: { id: needId }, include: { commitments: true } }); return !!need && (need.authorId === userId || need.commitments.some(c => c.userId === userId) || (await prisma.user.findUnique({ where: { id: userId }, select: { role: true } }))?.role === 'ADMIN'); }
+async function canDiscuss(userId: string, needId: string) {
+  const need = await prisma.need.findUnique({ where: { id: needId }, include: { commitments: true } });
+  if (!need) return false;
+  if (need.authorId === userId || need.commitments.some(c => c.userId === userId)) return true;
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  if (user?.role === 'ADMIN') return true;
+  return !!need.communityId && !!(await prisma.membership.findUnique({ where: { userId_communityId: { userId, communityId: need.communityId } } }).then(m => m && (m.role === 'MANAGER' || m.role === 'OWNER')));
+}
 export async function sendMessage(needId: string, formData: FormData) { const user = await requireUser(); if (!(await canDiscuss(user.id, needId))) return; const content = String(formData.get('content') ?? '').trim().slice(0, 2000); if (!content) return; await prisma.message.create({ data: { needId, authorId: user.id, content } }); revalidatePath(`/app/besoins/${needId}`); revalidatePath('/app/discussions'); }
 export async function updateNeed(needId: string, formData: FormData) { const user = await requireUser(); const need = await prisma.need.findUnique({ where: { id: needId } }); if (!need || need.authorId !== user.id) return; const parsed = needSchema.safeParse(Object.fromEntries(formData)); if (!parsed.success) return; const d = parsed.data; await prisma.need.update({ where: { id: needId }, data: { title:d.title, description:d.description, category:d.category, city:d.city||null, startsAt:d.startsAt?new Date(d.startsAt):null, slots:d.slots, minSlots:d.minSlots?Number(d.minSlots):null, recurrence:d.recurrence, recurrenceEnd:d.recurrenceEnd?new Date(d.recurrenceEnd):null } }); revalidatePath(`/app/besoins/${needId}`); revalidatePath('/app/mes-besoins'); }
