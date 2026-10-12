@@ -9,6 +9,21 @@ import { auth, signOut } from '@/auth';
 import { requireUser } from '@/lib/session';
 import { communitySchema, needSchema, slugify } from '@/lib/validation';
 import { awardBadge } from '@/server/badges';
+import { sendEmail } from '@/lib/email';
+
+async function getSetting(key: string) {
+  const setting = await prisma.setting.findUnique({ where: { key } });
+  return setting?.value;
+}
+
+function settingBoolean(value: unknown, fallback: boolean) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') return value === 'true' || value === 'on' || value === '1';
+  return fallback;
+}
+
+function settingString(value: unknown) { return typeof value === 'string' ? value : ''; }
+
 
 async function isManager(userId: string, communityId: string) { const m = await prisma.membership.findUnique({ where: { userId_communityId: { userId, communityId } } }); return m?.role === 'MANAGER' || m?.role === 'OWNER'; }
 export async function acceptTerms(formData: FormData) { const session = await auth(); if (!session?.user) redirect('/connexion'); if (formData.get('terms') !== 'on') redirect('/app/bienvenue?erreur=cgu'); await prisma.user.update({ where: { id: session.user.id }, data: { termsAcceptedAt: new Date(), sensitiveConsentAt: formData.get('sensitive') === 'on' ? new Date() : null } }); redirect('/app'); }
@@ -26,6 +41,26 @@ export async function swipe(needId: string, direction: 'LEFT' | 'RIGHT') {
         if (!(error instanceof Error) || !('code' in error) || (error as { code?: string }).code !== 'P2002') throw error;
       }
       await awardBadge(user.id, 'FIRST_YES');
+      try {
+        const [settings, volunteer, author] = await Promise.all([
+          prisma.setting.findMany({ where: { key: { in: ['emailEnabled', 'notifyVolunteerOnCommitment', 'notifyAuthorOnCommitment', 'commitmentVolunteerEmail', 'commitmentAuthorEmail'] } } }),
+          prisma.user.findUnique({ where: { id: user.id }, select: { email: true, emailNotificationsEnabled: true, name: true } }),
+          prisma.user.findUnique({ where: { id: need.authorId }, select: { email: true, emailNotificationsEnabled: true, name: true } }),
+        ]);
+        const values = Object.fromEntries(settings.map((setting) => [setting.key, setting.value]));
+        if (settingBoolean(values.emailEnabled, true)) {
+          const notifyVolunteer = settingBoolean(values.notifyVolunteerOnCommitment ?? values.commitmentVolunteerEmail, true);
+          const notifyAuthor = settingBoolean(values.notifyAuthorOnCommitment ?? values.commitmentAuthorEmail, true);
+          const emails: Promise<void>[] = [];
+          if (notifyVolunteer && volunteer?.email && volunteer.emailNotificationsEnabled) {
+            emails.push(sendEmail(volunteer.email, `Votre engagement pour « ${need.title} »`, `Bonjour ${volunteer.name ?? ''},\n\nVotre engagement pour la mission « ${need.title} » a bien été enregistré.`));
+          }
+          if (notifyAuthor && author?.email && author.emailNotificationsEnabled) {
+            emails.push(sendEmail(author.email, `Un bénévole rejoint « ${need.title} »`, `${volunteer?.name ?? 'Un bénévole'} a rejoint votre mission « ${need.title} ».`));
+          }
+          await Promise.all(emails);
+        }
+      } catch (error) { console.error('Commitment email notification failed', error); }
     }
   }
   revalidatePath('/app/mes-engagements'); revalidatePath('/app'); revalidatePath(`/app/besoins/${needId}`);
@@ -33,12 +68,12 @@ export async function swipe(needId: string, direction: 'LEFT' | 'RIGHT') {
 export async function withdraw(needId: string) { const user = await requireUser(); await prisma.commitment.deleteMany({ where: { userId: user.id, needId, completedAt: null } }); revalidatePath('/app/mes-engagements'); }
 export async function createNeed(formData: FormData) { const user = await requireUser(); const parsed = needSchema.safeParse(Object.fromEntries(formData)); if (!parsed.success) redirect('/app/besoins/nouveau?erreur=formulaire'); const d = parsed.data; let communityId: string | null = null; let status: 'PUBLISHED' | 'PENDING' = 'PUBLISHED'; if (d.communityId) { const member = await prisma.membership.findUnique({ where: { userId_communityId: { userId: user.id, communityId: d.communityId } } }); if (!member) redirect('/app/besoins/nouveau?erreur=communaute'); communityId = d.communityId; status = member.role === 'MEMBER' ? 'PENDING' : 'PUBLISHED'; } await prisma.need.create({ data: { title:d.title, description:d.description, category:d.category, city:d.city||null, startsAt:d.startsAt?new Date(d.startsAt):null, slots:d.slots, minSlots:d.minSlots?Number(d.minSlots):null, recurrence:d.recurrence, recurrenceEnd:d.recurrenceEnd?new Date(d.recurrenceEnd):null, authorId:user.id, communityId, status } }); await awardBadge(user.id, 'ASKER'); redirect(`/app/mes-besoins?cree=${status === 'PENDING' ? 'attente' : 'publie'}`); }
 export async function reviewNeed(needId: string, approve: boolean) { const user = await requireUser(); const need = await prisma.need.findUnique({ where: { id: needId } }); if (!need?.communityId) return; if (user.role !== 'ADMIN' && !(await isManager(user.id, need.communityId))) return; await prisma.need.update({ where: { id: needId }, data: { status: approve ? 'PUBLISHED' : 'REJECTED', reviewedById: user.id } }); revalidatePath('/app/communautes'); }
-export async function confirmCommitment(commitmentId: string) { const user = await requireUser(); const c = await prisma.commitment.findUnique({ where: { id: commitmentId }, include: { need: true } }); if (!c || c.completedAt) return; const allowed = c.need.authorId === user.id || user.role === 'ADMIN' || (c.need.communityId ? await isManager(user.id, c.need.communityId) : false); if (!allowed) return; await prisma.$transaction([prisma.commitment.update({ where: { id: c.id }, data: { completedAt: new Date() } }), prisma.user.update({ where: { id: c.userId }, data: { points: { increment: c.need.points } } })]); const done = await prisma.commitment.count({ where: { userId: c.userId, completedAt: { not: null } } }); await awardBadge(c.userId, 'FIRST_DONE'); if (done >= 5) await awardBadge(c.userId, 'FIVE_DONE'); revalidatePath('/app/mes-besoins'); }
+export async function confirmCommitment(commitmentId: string) { const user = await requireUser(); const c = await prisma.commitment.findUnique({ where: { id: commitmentId }, include: { need: true } }); if (!c || c.completedAt) return; const allowed = c.need.authorId === user.id || user.role === 'ADMIN' || (c.need.communityId ? await isManager(user.id, c.need.communityId) : false); if (!allowed) return; await prisma.$transaction([prisma.commitment.update({ where: { id: c.id }, data: { completedAt: new Date() } }), prisma.user.update({ where: { id: c.userId }, data: { points: { increment: c.need.points } } })]); const done = await prisma.commitment.count({ where: { userId: c.userId, completedAt: { not: null } } ); await awardBadge(c.userId, 'FIRST_DONE'); if (done >= 5) await awardBadge(c.userId, 'FIVE_DONE'); revalidatePath('/app/mes-besoins'); }
 export async function closeNeed(needId: string) { const user = await requireUser(); await prisma.need.updateMany({ where: { id: needId, authorId: user.id }, data: { status: 'DONE' } }); revalidatePath('/app/mes-besoins'); }
-export async function createCommunity(formData: FormData) { const user = await requireUser(); const parsed = communitySchema.safeParse(Object.fromEntries(formData)); if (!parsed.success) redirect('/app/communautes?erreur=formulaire'); const base = slugify(parsed.data.name) || 'communaute'; const slug = `${base}-${Math.random().toString(36).slice(2, 6)}`; const community = await prisma.community.create({ data: { name: parsed.data.name, description: parsed.data.description || null, city: parsed.data.city || null, slug, visibility: 'PUBLIC', accessCodeRequired: false, memberApprovalRequired: false, members: { create: { userId: user.id, role: 'OWNER' } } } }); await awardBadge(user.id, 'BUILDER'); redirect(`/app/communautes/${community.id}`); }
+export async function createCommunity(formData: FormData) { const user = await requireUser(); const parsed = communitySchema.safeParse(Object.fromEntries(formData)); if (!parsed.success) redirect('/app/communautes?erreur=formulaire'); const base = slugify(parsed.data.name) || 'communaute'; const slug = `${base}-${Math.random().toString(36).slice(2, 6)}`; const community = await prisma.community.create({ data: { name: parsed.data.name, description: parsed.data.description || null, city: parsed.data.city || null, slug, visibility: 'PUBLIC', accessCodeRequired: false, memberApprovalRequired: false, members: { create: { userId: user.id, role: 'OWNER' } } } }); await awardBadge(user.id, 'BUILDER'); revalidatePath(`/app/communautes/${community.id}`); }
 export async function joinCommunity(formData: FormData) { const user = await requireUser(); const code = String(formData.get('code') ?? '').trim(); const community = await prisma.community.findUnique({ where: { inviteCode: code } }); if (!community) redirect('/app/communautes?erreur=code'); await prisma.membership.upsert({ where: { userId_communityId: { userId: user.id, communityId: community.id } }, update: {}, create: { userId: user.id, communityId: community.id, approved: !community.memberApprovalRequired } }); redirect(`/app/communautes/${community.id}`); }
 export async function setMemberRole(membershipId: string, role: 'MEMBER' | 'MANAGER') { const user = await requireUser(); const m = await prisma.membership.findUnique({ where: { id: membershipId } }); if (!m || m.role === 'OWNER') return; const me = await prisma.membership.findUnique({ where: { userId_communityId: { userId: user.id, communityId: m.communityId } } }); if (me?.role !== 'OWNER' && user.role !== 'ADMIN') return; await prisma.membership.update({ where: { id: membershipId }, data: { role } }); revalidatePath('/app/communautes'); }
-export async function leaveCommunity(communityId: string) { const user = await requireUser(); await prisma.membership.deleteMany({ where: { userId: user.id, communityId, role: { not: 'OWNER' } } }); redirect('/app/communautes'); }
+export async function leaveCommunity(communityId: string) { const user = await requireUser(); const m = await prisma.membership.findUnique({ where: { userId_communityId: { userId: user.id, communityId } } }); if (!m || m.role === 'OWNER') return; await prisma.membership.delete({ where: { id: m.id } }); revalidatePath('/app/communautes'); }
 export async function updateProfile(formData: FormData) { const user = await requireUser(); const firstName = String(formData.get('firstName') ?? '').trim().slice(0, 60) || null; const lastName = String(formData.get('lastName') ?? '').trim().slice(0, 60) || null; const displayName = [firstName, lastName].filter(Boolean).join(' ').trim(); await prisma.user.update({ where: { id: user.id }, data: { firstName, lastName, ...(displayName ? { name: displayName } : {}), bio: String(formData.get('bio') ?? '').slice(0, 280) || null, city: String(formData.get('city') ?? '').slice(0, 80) || null, showOnLeaderboard: formData.get('leaderboard') === 'on' } }); revalidatePath('/app/profil'); }
 export async function deleteAccount() { const user = await requireUser(); await prisma.user.delete({ where: { id: user.id } }); await signOut({ redirectTo: '/?compte=supprime' }); }
 export async function logout() { await signOut({ redirectTo: '/' }); }
@@ -56,5 +91,29 @@ async function canDiscuss(userId: string, needId: string) {
   if (user?.role === 'ADMIN') return true;
   return !!need.communityId && !!(await prisma.membership.findUnique({ where: { userId_communityId: { userId, communityId: need.communityId } } }).then(m => m && (m.role === 'MANAGER' || m.role === 'OWNER')));
 }
-export async function sendMessage(needId: string, formData: FormData) { const user = await requireUser(); if (!(await canDiscuss(user.id, needId))) return; const content = String(formData.get('content') ?? '').trim().slice(0, 2000); if (!content) return; await prisma.message.create({ data: { needId, authorId: user.id, content } }); revalidatePath(`/app/besoins/${needId}`); revalidatePath('/app/discussions'); }
+export async function sendMessage(needId: string, formData: FormData) {
+  const user = await requireUser();
+  if (!(await canDiscuss(user.id, needId))) return;
+  const content = String(formData.get('content') ?? '').trim().slice(0, 2000);
+  if (!content) return;
+  await prisma.message.create({ data: { needId, authorId: user.id, content } });
+  try {
+    const [modeValue, need] = await Promise.all([
+      getSetting('messageEmailMode'),
+      prisma.need.findUnique({ where: { id: needId }, select: { title: true, authorId: true, author: { select: { email: true, emailNotificationsEnabled: true } }, commitments: { select: { user: { select: { email: true, emailNotificationsEnabled: true } } } } } }),
+    ]);
+    const mode = settingString(modeValue);
+    if (need && (mode === 'each' || mode === 'per-message')) {
+      const recipients = new Map<string, boolean>();
+      if (need.author.email && need.authorId !== user.id && need.author.emailNotificationsEnabled) recipients.set(need.author.email, true);
+      for (const commitment of need.commitments) {
+        const recipient = commitment.user;
+        if (recipient.email && recipient.email !== user.email && recipient.emailNotificationsEnabled) recipients.set(recipient.email, true);
+      }
+      await Promise.all([...recipients.keys()].map((to) => sendEmail(to, `Nouveau message dans « ${need.title} »`, `Un nouveau message a été publié dans la discussion « ${need.title} » :\n\n${content}`)));
+    }
+  } catch (error) { console.error('Message email notification failed', error); }
+  revalidatePath(`/app/besoins/${needId}`);
+  revalidatePath('/app/discussions');
+}
 export async function updateNeed(needId: string, formData: FormData) { const user = await requireUser(); const need = await prisma.need.findUnique({ where: { id: needId } }); if (!need || need.authorId !== user.id) return; const parsed = needSchema.safeParse(Object.fromEntries(formData)); if (!parsed.success) return; const d = parsed.data; await prisma.need.update({ where: { id: needId }, data: { title:d.title, description:d.description, category:d.category, city:d.city||null, startsAt:d.startsAt?new Date(d.startsAt):null, slots:d.slots, minSlots:d.minSlots?Number(d.minSlots):null, recurrence:d.recurrence, recurrenceEnd:d.recurrenceEnd?new Date(d.recurrenceEnd):null } }); revalidatePath(`/app/besoins/${needId}`); revalidatePath('/app/mes-besoins'); }
