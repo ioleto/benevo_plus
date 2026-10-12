@@ -1,6 +1,34 @@
-import NextAuth from 'next-auth';
-import Google from 'next-auth/providers/google';
-import { PrismaAdapter } from '@auth/prisma-adapter';
-import { prisma } from '@/lib/prisma';
-const admins=(process.env.ADMIN_EMAILS||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
-export const {handlers,auth,signIn,signOut}=NextAuth({adapter:PrismaAdapter(prisma),providers:[Google],session:{strategy:'database'},pages:{signIn:'/connexion'},callbacks:{async session({session,user}){const db=await prisma.user.findUnique({where:{id:user.id}});if(db?.email&&admins.includes(db.email.toLowerCase())&&db.role!=='ADMIN')await prisma.user.update({where:{id:db.id},data:{role:'ADMIN'}});session.user.id=user.id;session.user.role=admins.includes(db?.email?.toLowerCase()||'')?'ADMIN':db?.role??'USER';session.user.onboarded=Boolean(db?.termsAcceptedAt);return session;}}});
+import NextAuth from "next-auth";
+import Google from "next-auth/providers/google";
+import { PrismaAdapter } from "@auth/prisma-adapter";
+import { prisma } from "@/lib/prisma";
+const admins = (process.env.ADMIN_EMAILS || "")
+  .split(",")
+  .map((x) => x.trim().toLowerCase())
+  .filter(Boolean);
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  adapter: PrismaAdapter(prisma),
+  providers: [Google],
+  session: { strategy: "database" },
+  pages: { signIn: "/connexion" },
+  callbacks: {
+    async session({ session, user }) {
+      const db = await prisma.user.findUnique({ where: { id: user.id } });
+      if (
+        db?.email &&
+        admins.includes(db.email.toLowerCase()) &&
+        db.role !== "ADMIN"
+      )
+        await prisma.user.update({
+          where: { id: db.id },
+          data: { role: "ADMIN" },
+        });
+      session.user.id = user.id;
+      session.user.role = admins.includes(db?.email?.toLowerCase() || "")
+        ? "ADMIN"
+        : (db?.role ?? "USER");
+      session.user.onboarded = Boolean(db?.termsAcceptedAt);
+      return session;
+    },
+  },
+});

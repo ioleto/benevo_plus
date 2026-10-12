@@ -1,4 +1,40 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { sendEmail } from '@/lib/email';
-export async function POST(request:Request){if(request.headers.get('authorization')!==`Bearer ${process.env.CRON_SECRET}`)return NextResponse.json({error:'Unauthorized'},{status:401});const upcoming=await prisma.need.findMany({where:{startsAt:{gte:new Date(),lte:new Date(Date.now()+24*60*60*1000)},status:'PUBLISHED'},include:{author:true,commitments:{include:{user:true}}}});for(const need of upcoming){for(const c of need.commitments)if(c.user.email&&c.user.emailNotificationsEnabled)await sendEmail(c.user.email,`Rappel : ${need.title}`,'Votre mission commence bientôt.');if(need.minSlots&&need.commitments.length<need.minSlots&&need.author.email&&need.author.emailNotificationsEnabled)await sendEmail(need.author.email,`Participants insuffisants : ${need.title}`,`Cette mission compte ${need.commitments.length} participant(s), pour un minimum de ${need.minSlots}.`);}return NextResponse.json({sent:upcoming.length});}
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { sendEmail } from "@/lib/email";
+export async function POST(request: Request) {
+  if (
+    request.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`
+  )
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const upcoming = await prisma.need.findMany({
+    where: {
+      startsAt: {
+        gte: new Date(),
+        lte: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      },
+      status: "PUBLISHED",
+    },
+    include: { author: true, commitments: { include: { user: true } } },
+  });
+  for (const need of upcoming) {
+    for (const c of need.commitments)
+      if (c.user.email && c.user.emailNotificationsEnabled)
+        await sendEmail(
+          c.user.email,
+          `Rappel : ${need.title}`,
+          "Votre mission commence bientôt.",
+        );
+    if (
+      need.minSlots &&
+      need.commitments.length < need.minSlots &&
+      need.author.email &&
+      need.author.emailNotificationsEnabled
+    )
+      await sendEmail(
+        need.author.email,
+        `Participants insuffisants : ${need.title}`,
+        `Cette mission compte ${need.commitments.length} participant(s), pour un minimum de ${need.minSlots}.`,
+      );
+  }
+  return NextResponse.json({ sent: upcoming.length });
+}
