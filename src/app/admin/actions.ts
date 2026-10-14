@@ -8,8 +8,8 @@ export async function saveSettings(formData: FormData) {
   for (const [key, value] of formData.entries())
     await prisma.setting.upsert({
       where: { key },
-      update: { value: value === "on" ? true : value },
-      create: { key, value: value === "on" ? true : value },
+      update: { value: value === "on" ? true : String(value) },
+      create: { key, value: value === "on" ? true : String(value) },
     });
   revalidatePath("/app/admin");
 }
@@ -32,3 +32,4 @@ export async function deleteCommunity(formData: FormData) {
   await prisma.community.delete({ where: { id: String(formData.get("id")) } });
   revalidatePath("/app/admin");
 }
+
