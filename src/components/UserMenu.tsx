@@ -50,7 +50,7 @@ export default function UserMenu({ variant = "app", name, image, isAdmin }: User
         {publicMenu ? (
           <><span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-[#c9a227] font-bold text-[#14213d]">{image ? <img src={image} alt="" className="h-full w-full object-cover" /> : initials(name)}</span><span className="hidden text-sm sm:inline">{name || "Mon compte"}</span></>
         ) : (
-          <><span className="grid h-7 w-7 place-items-center rounded-full bg-[#14213d] text-xs text-white" aria-hidden="true">♡</span><span className="hidden sm:inline">Mon espace</span><span aria-hidden="true">⌄</span></>
+          <><span className="grid h-8 w-8 place-items-center overflow-hidden rounded-full bg-[#14213d]" aria-hidden="true"><img src="/icon.svg" alt="" className="h-7 w-7" /></span><span className="hidden sm:inline">Mon espace</span><span aria-hidden="true">⌄</span></>
         )}
       </button>
       {open && (
@@ -74,4 +74,3 @@ export default function UserMenu({ variant = "app", name, image, isAdmin }: User
     </div>
   );
 }
-
