@@ -9,13 +9,14 @@ type UserMenuProps = {
   variant?: "public" | "app";
   name?: string | null;
   image?: string | null;
+  isAdmin?: boolean;
 };
 
 function initials(name?: string | null) {
   return (name || "B").split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
 }
 
-export default function UserMenu({ variant = "app", name, image }: UserMenuProps) {
+export default function UserMenu({ variant = "app", name, image, isAdmin }: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
@@ -63,6 +64,7 @@ export default function UserMenu({ variant = "app", name, image }: UserMenuProps
             <Link onClick={() => setOpen(false)} href="/app/mes-engagements" className="menu-link">Mes engagements</Link>
             <Link onClick={() => setOpen(false)} href="/app/mes-besoins" className="menu-link">Mes besoins</Link>
             <Link onClick={() => setOpen(false)} href="/app/discussions" className="menu-link">Mes discussions</Link>
+            {isAdmin && <Link onClick={() => setOpen(false)} href="/app/admin" className="menu-link">Administration</Link>}
           </>}
           <form action={logout} onClick={() => setOpen(false)} className={publicMenu ? "" : "mt-1 border-t border-slate-100 pt-1"}>
             <button className={publicMenu ? "w-full rounded-lg px-3 py-2 text-left hover:bg-black/5" : "menu-link w-full text-left text-red-700"} type="submit">Se déconnecter</button>
@@ -72,3 +74,4 @@ export default function UserMenu({ variant = "app", name, image }: UserMenuProps
     </div>
   );
 }
+

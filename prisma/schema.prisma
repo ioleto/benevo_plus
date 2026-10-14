@@ -58,6 +58,8 @@ model User {
   city               String?      @db.VarChar(80)
   points             Int          @default(0)
   showOnLeaderboard  Boolean      @default(false)
+  emailNotificationsEnabled Boolean @default(true)
+  suspended          Boolean      @default(false)
   termsAcceptedAt    DateTime?
   sensitiveConsentAt DateTime?
   createdAt          DateTime     @default(now())
@@ -73,20 +75,20 @@ model User {
 }
 
 model Account {
-  userId             String   
-  type               String
-  provider            String
-  providerAccountId  String
-  refresh_token      String?
-  access_token       String?  @db.Text
-  expires_at         Int?
-  token_type         String?
-  scope              String?
-  id_token           String?  @db.Text
-  session_state       String?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?  @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?  @db.Text
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([provider, providerAccountId])
 }
@@ -109,56 +111,56 @@ model VerificationToken {
 }
 
 model Community {
-  id                    String             @id @default(cuid())
-  name                  String             @db.VarChar(100)
-  slug                  String             @unique
-  description           String?            @db.VarChar(1000)
-  city                  String?            @db.VarChar(80)
-  inviteCode            String             @unique @default(cuid())
-  visibility            CommunityVisibility @default(PUBLIC)
-  accessCodeRequired    Boolean            @default(false)
-  memberApprovalRequired Boolean           @default(false)
-  createdAt             DateTime           @default(now())
-  members               Membership[]
-  needs                 Need[]
+  id                      String              @id @default(cuid())
+  name                    String              @db.VarChar(100)
+  slug                    String              @unique
+  description             String?             @db.VarChar(1000)
+  city                    String?             @db.VarChar(80)
+  inviteCode              String              @unique @default(cuid())
+  visibility              CommunityVisibility @default(PUBLIC)
+  accessCodeRequired      Boolean             @default(false)
+  memberApprovalRequired  Boolean             @default(false)
+  createdAt               DateTime            @default(now())
+  members                 Membership[]
+  needs                   Need[]
 }
 
 model Membership {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   userId      String
   communityId String
   role        MemberRole @default(MEMBER)
-  approved    Boolean   @default(true)
-  joinedAt    DateTime  @default(now())
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  approved    Boolean    @default(true)
+  joinedAt    DateTime   @default(now())
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  community   Community  @relation(fields: [communityId], references: [id], onDelete: Cascade)
 
   @@unique([userId, communityId])
 }
 
 model Need {
-  id           String       @id @default(cuid())
-  title        String       @db.VarChar(120)
-  description  String       @db.VarChar(2000)
-  category     String       @db.VarChar(40)
-  city         String?      @db.VarChar(80)
-  startsAt     DateTime?
-  slots        Int          @default(1)
-  minSlots     Int?
-  recurrence   Recurrence   @default(NONE)
+  id            String       @id @default(cuid())
+  title         String       @db.VarChar(120)
+  description   String       @db.VarChar(2000)
+  category      String       @db.VarChar(40)
+  city          String?      @db.VarChar(80)
+  startsAt      DateTime?
+  slots         Int          @default(1)
+  minSlots      Int?
+  recurrence    Recurrence   @default(NONE)
   recurrenceEnd DateTime?
-  points       Int          @default(10)
-  status       NeedStatus   @default(PENDING)
-  authorId     String
-  communityId  String?
-  reviewedById String?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  author       User         @relation("NeedAuthor", fields: [authorId], references: [id], onDelete: Cascade)
-  community    Community?   @relation(fields: [communityId], references: [id], onDelete: Cascade)
-  commitments  Commitment[]
-  messages     Message[]
-  swipes       Swipe[]
+  points        Int          @default(10)
+  status        NeedStatus   @default(PENDING)
+  authorId      String
+  communityId   String?
+  reviewedById  String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  author        User         @relation("NeedAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  community     Community?   @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  commitments   Commitment[]
+  messages      Message[]
+  swipes        Swipe[]
 
   @@index([status, communityId])
 }
@@ -171,6 +173,7 @@ model Message {
   createdAt DateTime @default(now())
   need      Need     @relation(fields: [needId], references: [id], onDelete: Cascade)
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
   @@index([needId, createdAt])
 }
 
@@ -187,13 +190,13 @@ model Commitment {
 }
 
 model Swipe {
-  id         String        @id @default(cuid())
+  id         String         @id @default(cuid())
   userId     String
   needId     String
   direction  SwipeDirection
-  createdAt  DateTime      @default(now())
-  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  need       Need          @relation(fields: [needId], references: [id], onDelete: Cascade)
+  createdAt  DateTime       @default(now())
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  need       Need           @relation(fields: [needId], references: [id], onDelete: Cascade)
 
   @@unique([userId, needId])
 }
@@ -207,3 +210,21 @@ model UserBadge {
 
   @@unique([userId, badge])
 }
+
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+model EmailLog {
+  id        String   @id @default(cuid())
+  to        String
+  subject   String
+  status    String
+  error     String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
