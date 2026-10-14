@@ -1,25 +1,5 @@
 import { NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin";
-export async function GET() {
-  await requireAdmin();
-  return NextResponse.json(await prisma.setting.findMany());
-}
-export async function PUT(request: Request) {
-  await requireAdmin();
-  const body = (await request.json()) as unknown;
-  if (!body || typeof body !== "object" || Array.isArray(body)) {
-    return NextResponse.json({ error: "Invalid settings payload" }, { status: 400 });
-  }
-  await prisma.$transaction(
-    Object.entries(body).map(([key, value]) =>
-      prisma.setting.upsert({
-        where: { key },
-        update: { value: value as Prisma.InputJsonValue },
-        create: { key, value: value as Prisma.InputJsonValue },
-      }),
-    ),
-  );
-  return NextResponse.json({ ok: true });
-}
+import { createTransport, getSmtpConfig, publicSmtpConfig, saveSmtpConfig, sendTestEmailWithConfig, smtpConfigFromForm } from "@/lib/email";
+export async function GET() { await requireAdmin(); return NextResponse.json(publicSmtpConfig(await getSmtpConfig())); }
+export async function POST(request: Request) { await requireAdmin(); try { const body = await request.json() as Record<string, unknown>; const current = await getSmtpConfig(); const config = smtpConfigFromForm(body, current || undefined); if (body.action === "verify") { await (await createTransport(config)).verify(); return NextResponse.json({ ok: true, message: "Connexion SMTP réussie." }); } if (body.action === "send") { const admin = await requireAdmin(); await sendTestEmailWithConfig(admin.email || String(body.to || ""), config); return NextResponse.json({ ok: true, message: "E-mail de test envoyé." }); } if (body.action === "save") { await saveSmtpConfig(config); return NextResponse.json({ ok: true, message: "Configuration enregistrée." }); } return NextResponse.json({ error: "Action inconnue." }, { status: 400 }); } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : String(error) }, { status: 400 }); } }
