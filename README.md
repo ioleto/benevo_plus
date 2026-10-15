@@ -1,11 +1,6 @@
 # Bénévo+
 
-Bénévo+ met en relation les bénévoles et les besoins de communautés locales.
-
 ## Communautés
-La page `/app/communautes` explore uniquement les communautés publiques, affiche le nombre de membres, permet une recherche par nom/description et ville, et propose une carte OpenStreetMap sans clé API. Les coordonnées `latitude`/`longitude` sont optionnelles afin de conserver la compatibilité avec les données existantes. Appliquez le schéma avec `npm run db:push` après `npx prisma generate`.
-
-La création et l’adhésion conservent le fonctionnement par code d’invitation. Les communautés privées restent accessibles uniquement depuis leurs parcours authentifiés existants.
 
 ## Développement
 ```bash
@@ -13,12 +8,17 @@ npm ci
 npx prisma generate
 npm run dev
 ```
-Les variables d’environnement sont documentées dans `.env.example`. En production derrière un reverse proxy, configurez l’URL publique Auth.js (`AUTH_URL`) et `AUTH_TRUST_HOST=true`.
 
 ### Autocomplétion ville et carte
-Les formulaires de communauté utilisent l’autocomplétion de `api-adresse.data.gouv.fr` pour enregistrer la ville et ses coordonnées. La carte est rendue avec Leaflet et les tuiles OpenStreetMap. Ces services externes sont à prendre en compte dans l’information RGPD (journalisation réseau, données de localisation et conditions d’utilisation d’OSM).
 
 ## Erreurs connues de la CI
+
+### Runtime : `Cannot find module prisma/build/index.js` / 502
+
+- **Symptôme :** le conteneur `app` redémarre en boucle, le reverse proxy renvoie `502 Bad Gateway` et les logs répètent `Cannot find module `/app/node_modules/prisma/build/index.js` pendant `prisma db push`.
+- **Cause :** avec la sortie Next.js `standalone`, le runner ne reçoit pas automatiquement la CLI Prisma (`node_modules/prisma`) ni tous ses fichiers/runtime engines. L’échec de la CLI était auparavant interprété à tort comme une base PostgreSQL pas encore prête.
+- **Correctif :** copier explicitement `prisma`, `@prisma`, `.prisma`, `.bin` et le dossier `prisma/` depuis l’étape `builder`, puis vérifier la CLI au démarrage et ne réessayer que les erreurs de connexion PostgreSQL.
+- **Prévention :** ne pas se limiter à `docker build` ; lancer l’image avec `docker run` (ou `docker compose up`) et vérifier que l’entrée exécute `prisma db push` puis démarre le serveur.
 
 Cette section récapitule les problèmes rencontrés dans l’historique réel de la PR **#22** et leurs correctifs.
 
@@ -58,7 +58,7 @@ Les entrées ci-dessous distinguent les échecs de validation explicitement sign
 | #17 | L’accès `/app/admin` pouvait répondre 404 pour l’administrateur configuré. | Le code ne lisait que `ADMIN_EMAILS`, alors que Compose et `.env.example` exposaient `ADMIN_EMAIL`; #17 centralise la compatibilité, normalise la comparaison et réévalue le rôle à chaque session. | Tester les deux noms de variable (`ADMIN_EMAIL` et `ADMIN_EMAILS`) et une adresse avec casse/espaces variables. |
 | #19 → #21 | Deux en-têtes apparaissaient sur les routes connectées. | #19 avait ajouté un shell/header connecté dans le layout racine alors que `src/app/app/layout.tsx` en possédait déjà un; #21 supprime le doublon et conserve le header du layout `/app`. | Cartographier les layouts imbriqués et vérifier visuellement une route publique et une route `/app`. |
 | #19 → #20 | Les styles globaux pouvaient disparaître après la modification du layout racine. | L’import de `globals.css` avait été perdu; #20 le restaure dans le layout racine et transmet les props attendues à `UserMenu`. | Après toute réécriture de layout, vérifier l’import CSS global et lancer le build Next.js. |
-| #19 → #21/#22 | La déconnexion pouvait ne pas déclencher l’action serveur. | La fermeture du menu sur le `<form>` pouvait démonter le formulaire avant `signOut`; #21 déplace la fermeture sur le bouton après soumission. #22 confirme le correctif et durcit la gestion du clic extérieur. | Ne pas fermer/démonter le formulaire avant sa soumission; tester `action={logout}` avec un compte authentifié. |
+| #19 → #21/#22 | La déconnexion pouvait ne pas déclencher l’action serveur. | La fermeture du menu sur le `onClick` pouvait démonter le formulaire avant `signOut`; #21 déplace la fermeture sur le bouton après soumission. #22 confirme le correctif et durcit la gestion du clic extérieur. | Ne pas fermer/démonter le formulaire avant sa soumission; tester `action={logout}` avec un compte authentifié. |
 | #11 → #13 | L’administration SMTP/notifications existait dans le code mais n’était pas toujours accessible depuis une navigation ou des vues dédiées. | #11 ajoute le centre admin et SMTP; #12 rend la configuration SMTP administrable; #13 ajoute les cartes/sections admin et conserve `requireAdmin()`. | Vérifier simultanément route, navigation, garde serveur et variables SMTP; reconstruire/redémarrer l’image après fusion. |
 | #15 → #16 | Les changements Docker pouvaient ne pas être appliqués après redémarrage ou base PostgreSQL non prête. | #16 ajoute les politiques `restart`, l’attente/retry Prisma et le healthcheck/ordre de démarrage documentés dans la PR. | Valider `docker compose config`, tester un redémarrage à froid et attendre `service_healthy` avant `prisma db push`. |
 | #1–#6, #8, #14, #15, #18, #19 | Aucun échec CI/build précis n’est établi par les informations de PR disponibles; plusieurs descriptions disent seulement que la validation locale n’a pas été exécutée ou que la PR est vide/WIP. | Ne pas transformer une validation non exécutée en erreur de compilation. Les checks réussis lorsqu’ils sont présents restent la preuve de référence. | Conserver la distinction entre échec observé, validation non exécutée et régression fonctionnelle. |
