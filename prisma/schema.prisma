@@ -116,6 +116,8 @@ model Community {
   slug                    String              @unique
   description             String?             @db.VarChar(1000)
   city                    String?             @db.VarChar(80)
+  latitude                Float?
+  longitude               Float?
   inviteCode              String              @unique @default(cuid())
   visibility              CommunityVisibility @default(PUBLIC)
   accessCodeRequired      Boolean             @default(false)
