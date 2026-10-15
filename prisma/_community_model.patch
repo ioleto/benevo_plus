@@ -1,0 +1,16 @@
+model Community {
+  id                      String              @id @default(cuid())
+  name                    String              @db.VarChar(100)
+  slug                    String              @unique
+  description             String?             @db.VarChar(1000)
+  city                    String?             @db.VarChar(80)
+  latitude                Float?
+  longitude               Float?
+  inviteCode              String              @unique @default(cuid())
+  visibility              CommunityVisibility @default(PUBLIC)
+  accessCodeRequired      Boolean             @default(false)
+  memberApprovalRequired  Boolean             @default(false)
+  createdAt               DateTime            @default(now())
+  members                 Membership[]
+  needs                   Need[]
+}
