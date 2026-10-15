@@ -9,6 +9,12 @@ const etapes = [
 export default function Accueil() {
   return (
     <div className="space-y-12">
+      <section className="rounded-2xl border border-[#c9a227]/30 bg-[#14213d] px-6 py-5 text-center text-white shadow-sm sm:px-10">
+        <p className="text-2xl font-extrabold tracking-tight sm:text-3xl">
+          Bénévo<span className="text-[#c9a227]">+</span>
+        </p>
+        <p className="mt-1 text-sm text-white/75 sm:text-base">Le lien qui transforme l’envie d’aider en action.</p>
+      </section>
       <section className="py-10 text-center">
         <h1 className="text-4xl font-extrabold sm:text-5xl">
           Rendre service, <span className="text-[#c9a227]">simplement</span>.
