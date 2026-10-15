@@ -2,10 +2,7 @@ import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
-const admins = (process.env.ADMIN_EMAILS || "")
-  .split(",")
-  .map((x) => x.trim().toLowerCase())
-  .filter(Boolean);
+import { isConfiguredAdminEmail } from "@/lib/admin-config";
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   providers: [Google],
@@ -16,7 +13,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const db = await prisma.user.findUnique({ where: { id: user.id } });
       if (
         db?.email &&
-        admins.includes(db.email.toLowerCase()) &&
+        isConfiguredAdminEmail(db.email) &&
         db.role !== "ADMIN"
       )
         await prisma.user.update({
@@ -24,7 +21,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           data: { role: "ADMIN" },
         });
       session.user.id = user.id;
-      session.user.role = admins.includes(db?.email?.toLowerCase() || "")
+      session.user.role = isConfiguredAdminEmail(db?.email)
         ? "ADMIN"
         : (db?.role ?? "USER");
       session.user.onboarded = Boolean(db?.termsAcceptedAt);
