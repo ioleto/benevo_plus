@@ -13,5 +13,13 @@ export const needSchema = z.object({
   recurrence: z.enum(['NONE', 'DAILY', 'WEEKLY', 'BIWEEKLY', 'MONTHLY']).default('NONE'),
   recurrenceEnd: z.string().optional().or(z.literal('')), communityId: z.string().optional().or(z.literal('')),
 }).refine((value) => !value.minSlots || Number(value.minSlots) <= value.slots, { path: ['minSlots'], message: 'Le minimum ne peut pas dépasser le maximum' });
-export const communitySchema = z.object({ name: z.string().trim().min(3).max(100), description: z.string().trim().max(1000).optional().or(z.literal('')), city: z.string().trim().max(80).optional().or(z.literal('')) });
+const optionalLatitude = z.preprocess((value) => value === '' || value == null ? undefined : value, z.coerce.number().finite().min(-90).max(90)).optional();
+const optionalLongitude = z.preprocess((value) => value === '' || value == null ? undefined : value, z.coerce.number().finite().min(-180).max(180)).optional();
+export const communitySchema = z.object({
+  name: z.string().trim().min(3).max(100),
+  description: z.string().trim().max(1000).optional().or(z.literal('')),
+  city: z.string().trim().max(80).optional().or(z.literal('')),
+  latitude: optionalLatitude,
+  longitude: optionalLongitude,
+});
 export function slugify(input: string) { return input.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 60); }

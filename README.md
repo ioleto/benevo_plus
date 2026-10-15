@@ -14,3 +14,6 @@ npx prisma generate
 npm run dev
 ```
 Les variables d’environnement sont documentées dans `.env.example`. En production derrière un reverse proxy, configurez l’URL publique Auth.js (`AUTH_URL`) et `AUTH_TRUST_HOST=true`.
+
+### Autocomplétion ville et carte
+Les formulaires de communauté utilisent l’autocomplétion de `api-adresse.data.gouv.fr` pour enregistrer la ville et ses coordonnées. La carte est rendue avec Leaflet et les tuiles OpenStreetMap. Ces services externes sont à prendre en compte dans l’information RGPD (journalisation réseau, données de localisation et conditions d’utilisation d’OSM).
