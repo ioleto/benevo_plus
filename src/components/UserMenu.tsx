@@ -66,8 +66,8 @@ export default function UserMenu({ variant = "app", name, image, isAdmin }: User
             <Link onClick={() => setOpen(false)} href="/app/discussions" className="menu-link">Mes discussions</Link>
             {isAdmin && <Link onClick={() => setOpen(false)} href="/app/admin" className="menu-link">Administration</Link>}
           </>}
-          <form action={logout} onClick={() => setOpen(false)} className={publicMenu ? "" : "mt-1 border-t border-slate-100 pt-1"}>
-            <button className={publicMenu ? "w-full rounded-lg px-3 py-2 text-left hover:bg-black/5" : "menu-link w-full text-left text-red-700"} type="submit">Se déconnecter</button>
+          <form action={logout} className={publicMenu ? "" : "mt-1 border-t border-slate-100 pt-1"}>
+            <button onClick={() => setOpen(false)} className={publicMenu ? "w-full rounded-lg px-3 py-2 text-left hover:bg-black/5" : "menu-link w-full text-left text-red-700"} type="submit">Se déconnecter</button>
           </form>
         </div>
       )}
