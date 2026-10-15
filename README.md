@@ -46,3 +46,25 @@ npm run lint
 npm run build
 npx prisma validate
 ```
+
+## Compléments issus des PR #1 à #21
+
+Les entrées ci-dessous distinguent les échecs de validation explicitement signalés des régressions d’intégration qui ont nécessité un correctif. Les numéros de PR sont les références vérifiables dans l’historique ; aucune erreur n’est ajoutée lorsque la PR ne fournit pas de symptôme de CI/build.
+
+| PR | Symptôme ou risque établi | Cause et correctif | Prévention |
+|---|---|---|---|
+| #7, #9, #10, #11, #12, #13, #14, #17, #18, #19, #20, #21 | Les validations locales `npm`/`npx` ne peuvent pas démarrer (`Cannot find module '../lib/cli.js'`) ou `npm ci` n’est pas exécutable. | Les descriptions de ces PR indiquent un exécutable npm cassé dans le sandbox et/ou l’absence de `package-lock.json`; la CI GitHub est la validation de référence. | Vérifier l’outil npm et le lockfile dans un environnement propre avant de conclure à une régression applicative. |
+| #16 → #17 | Régression de marque : le header/menu ne conservait plus le rendu attendu du logo ou du libellé Bénévo+. | #16 remplace le logo du menu desktop par `/icon.svg`; #17 restaure la marque textuelle « Bénévo+ » dans les layouts tout en conservant l’icône du menu. | Vérifier les deux layouts et `UserMenu.tsx` ensemble; rechercher les occurrences de logo/cœur avant le build. |
+| #17 | L’accès `/app/admin` pouvait répondre 404 pour l’administrateur configuré. | Le code ne lisait que `ADMIN_EMAILS`, alors que Compose et `.env.example` exposaient `ADMIN_EMAIL`; #17 centralise la compatibilité, normalise la comparaison et réévalue le rôle à chaque session. | Tester les deux noms de variable (`ADMIN_EMAIL` et `ADMIN_EMAILS`) et une adresse avec casse/espaces variables. |
+| #19 → #21 | Deux en-têtes apparaissaient sur les routes connectées. | #19 avait ajouté un shell/header connecté dans le layout racine alors que `src/app/app/layout.tsx` en possédait déjà un; #21 supprime le doublon et conserve le header du layout `/app`. | Cartographier les layouts imbriqués et vérifier visuellement une route publique et une route `/app`. |
+| #19 → #20 | Les styles globaux pouvaient disparaître après la modification du layout racine. | L’import de `globals.css` avait été perdu; #20 le restaure dans le layout racine et transmet les props attendues à `UserMenu`. | Après toute réécriture de layout, vérifier l’import CSS global et lancer le build Next.js. |
+| #19 → #21/#22 | La déconnexion pouvait ne pas déclencher l’action serveur. | La fermeture du menu sur le `<form>` pouvait démonter le formulaire avant `signOut`; #21 déplace la fermeture sur le bouton après soumission. #22 confirme le correctif et durcit la gestion du clic extérieur. | Ne pas fermer/démonter le formulaire avant sa soumission; tester `action={logout}` avec un compte authentifié. |
+| #11 → #13 | L’administration SMTP/notifications existait dans le code mais n’était pas toujours accessible depuis une navigation ou des vues dédiées. | #11 ajoute le centre admin et SMTP; #12 rend la configuration SMTP administrable; #13 ajoute les cartes/sections admin et conserve `requireAdmin()`. | Vérifier simultanément route, navigation, garde serveur et variables SMTP; reconstruire/redémarrer l’image après fusion. |
+| #15 → #16 | Les changements Docker pouvaient ne pas être appliqués après redémarrage ou base PostgreSQL non prête. | #16 ajoute les politiques `restart`, l’attente/retry Prisma et le healthcheck/ordre de démarrage documentés dans la PR. | Valider `docker compose config`, tester un redémarrage à froid et attendre `service_healthy` avant `prisma db push`. |
+| #1–#6, #8, #14, #15, #18, #19 | Aucun échec CI/build précis n’est établi par les informations de PR disponibles; plusieurs descriptions disent seulement que la validation locale n’a pas été exécutée ou que la PR est vide/WIP. | Ne pas transformer une validation non exécutée en erreur de compilation. Les checks réussis lorsqu’ils sont présents restent la preuve de référence. | Conserver la distinction entre échec observé, validation non exécutée et régression fonctionnelle. |
+
+### Références de regroupement
+
+- Les régressions de fichiers/layouts entiers sont documentées avec leurs correctifs dans les PR **#19–#22**; elles complètent l’erreur de fichier tronqué déjà listée ci-dessus.
+- Les sujets récurrents « admin », « SMTP », « Docker/Compose » et « marque/header » sont regroupés par chaîne de régression plutôt que répétés comme des erreurs indépendantes.
+- Les PR **#1** et **#2** ont des checks GitHub réussis dans l’historique consulté; cela ne constitue pas une preuve d’échec CI pour ces PR.
