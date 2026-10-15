@@ -1,5 +1,5 @@
 // Service worker Bénévo+ : cache réseau d'abord, repli hors ligne pour les pages.
-const CACHE = "benevo-v1";
+const CACHE = "benevo-v2";
 const PRECACHE = ["/", "/manifest.webmanifest", "/icon.svg"];
 
 self.addEventListener("install", (e) => {
