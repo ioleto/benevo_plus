@@ -2,6 +2,18 @@
 
 ## Communautés
 
+## Fil
+
+Le **Fil** (`/app/fil`) rassemble les besoins ouverts publics et ceux des communautés de l’utilisateur, triés du plus récent au plus ancien.
+
+## Explorateur
+
+L’**Explorateur** (`/app/communautes`) permet de rechercher les communautés publiques et exclut celles déjà rejointes ou créées par l’utilisateur.
+
+## Carte
+
+La carte de l’Explorateur affiche les communautés géolocalisées en France métropolitaine avec Leaflet et OpenStreetMap.
+
 ## Développement
 ```bash
 npm ci
@@ -12,6 +24,12 @@ npm run dev
 ### Autocomplétion ville et carte
 
 ## Erreurs connues de la CI
+
+### Sandbox : `Cannot find module ../lib/cli.js` avec npm
+
+- **Symptôme :** les validations locales `npm install`, `npm run typecheck`, `npm run lint` et `npm run build` ne peuvent pas démarrer dans le sandbox lorsque l’exécutable npm global est incomplet.
+- **Cause :** l’installation npm du sandbox échoue avant l’exécution du projet (`/usr/local/bin/npm` ne trouve pas `../lib/cli.js`).
+- **Impact :** les validations locales de cette branche n’ont pas pu être exécutées ; la CI GitHub reste la validation de référence.
 
 ### Runtime : `Cannot find module prisma/build/index.js` / 502
 
