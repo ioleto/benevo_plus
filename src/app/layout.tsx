@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { auth } from "@/auth";
 import UserMenu from "@/components/UserMenu";
+import "./globals.css";
 const navigation = [
   { href: "/app", label: "Accueil" },
   { href: "/app/besoins/nouveau", label: "Publier" },
