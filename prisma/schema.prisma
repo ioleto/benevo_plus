@@ -150,6 +150,7 @@ model Need {
   recurrence    Recurrence   @default(NONE)
   recurrenceEnd DateTime?
   points        Int          @default(10)
+  viewCount     Int          @default(0)
   status        NeedStatus   @default(PENDING)
   authorId      String
   communityId   String?
@@ -227,4 +228,3 @@ model EmailLog {
 
   @@index([createdAt])
 }
-
