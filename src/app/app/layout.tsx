@@ -17,7 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
           <Link href="/app" className="flex items-center gap-2 text-lg font-extrabold tracking-tight text-[#14213d]"><img src="/icon.svg" alt="" className="h-9 w-9" /><span>Bénévo<span className="text-[#c9a227]">+</span></span></Link>
           <nav className="hidden items-center gap-1 lg:flex">{navigation.slice(1).map((item) => <Link key={item.href} href={item.href} className="rounded-full px-3 py-2 text-sm font-medium text-slate-600">{item.label}</Link>)}</nav>
-          <UserMenu isAdmin={isAdmin} />
+          <UserMenu isAdmin={isAdmin} name={session?.user?.name} image={session?.user?.image} />
         </div>
       </header>
       <main className="mx-auto max-w-6xl">{children}</main>

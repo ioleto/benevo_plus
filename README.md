@@ -116,3 +116,7 @@ La CI installe les dépendances, génère Prisma, exécute lint, typecheck, buil
 - [Déploiement Portainer](docs/portainer.md)
 - [Reverse proxy SWAG](docs/swag.md)
 - [`.env.example`](.env.example)
+
+### Correctifs d’interface récents
+
+L’espace connecté utilise un seul en-tête, celui du layout `/app`, avec le logo B+ et la navigation. Son bouton « Mon espace » reprend l’avatar Google de la session, avec repli sur les initiales. Le bandeau de marque public reste limité à l’accueil non connecté. La déconnexion est soumise par l’action serveur Auth.js et le menu se ferme lors des changements de route ou d’un clic extérieur.
