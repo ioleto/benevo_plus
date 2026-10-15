@@ -15,7 +15,7 @@ npm run dev
 
 ### Runtime : `Cannot find module prisma/build/index.js` / 502
 
-- **Symptôme :** le conteneur `app` redémarre en boucle, le reverse proxy renvoie `502 Bad Gateway` et les logs répètent `Cannot find module `/app/node_modules/prisma/build/index.js` pendant `prisma db push`.
+- **Symptôme :** le conteneur `app` redémarre en boucle, le reverse proxy renvoie `502 Bad Gateway` et les logs répètent `Cannot find module '/app/node_modules/prisma/build/index.js'` pendant `prisma db push`.
 - **Cause :** avec la sortie Next.js `standalone`, le runner ne reçoit pas automatiquement la CLI Prisma (`node_modules/prisma`) ni tous ses fichiers/runtime engines. L’échec de la CLI était auparavant interprété à tort comme une base PostgreSQL pas encore prête.
 - **Correctif :** copier explicitement `prisma`, `@prisma`, `.prisma`, `.bin` et le dossier `prisma/` depuis l’étape `builder`, puis vérifier la CLI au démarrage et ne réessayer que les erreurs de connexion PostgreSQL.
 - **Prévention :** ne pas se limiter à `docker build` ; lancer l’image avec `docker run` (ou `docker compose up`) et vérifier que l’entrée exécute `prisma db push` puis démarre le serveur.
