@@ -32,7 +32,7 @@ export default function CommunityMap({ communities }: { communities: Community[]
       const located = communities.filter((c) => c.latitude !== null && c.longitude !== null);
       const instance = L.map(node.current, {
         minZoom: 5,
-        maxBounds: [[41, -5.5], [-5.5, 10]],
+        maxBounds: [[41, -5.5], [51.5, 10]],
         maxBoundsViscosity: 1,
       }).setView([46.6, 2.4], 6);
       map = instance;
