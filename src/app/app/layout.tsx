@@ -23,7 +23,7 @@ export default async function AppLayout({
             href="/app"
             className="text-lg font-extrabold tracking-tight text-[#14213d]"
           >
-            Bénévo<span className="text-[#c9a227]">+</span>
+            <img src="/icon.svg" alt="Bénévo+" className="h-9 w-9" />
           </Link>
           <nav className="hidden items-center gap-1 lg:flex">
             {navigation.slice(1).map((item) => (

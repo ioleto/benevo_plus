@@ -81,3 +81,58 @@ Voir [docs/google-oauth.md](docs/google-oauth.md) pour créer le client, déclar
 - [Reverse proxy SWAG](docs/swag.md)
 - [`.env.example`](.env.example)
 - [`docker-compose.yml`](docker-compose.yml)
+
+## Fonctionnalités
+
+### Utilisateur et authentification
+
+- Connexion via Google OAuth avec Auth.js/NextAuth et sessions persistées en base PostgreSQL. Le dépôt ne configure pas de fournisseur Apple.
+- Attribution du rôle administrateur à partir de `ADMIN_EMAIL`; déconnexion depuis le menu utilisateur.
+- Profil utilisateur : nom, e-mail, avatar, paramètres et export des données RGPD.
+
+### Bénévolat et communautés
+
+- Création, modification, consultation et suppression de besoins/missions.
+- Besoins associés à une communauté, avec description, catégories, lieu, date, durée, capacité minimale et maximale.
+- Récurrence des besoins (fréquence et bornes de récurrence) et suivi des besoins publiés dans « Mes besoins ».
+- Découverte des besoins par cartes/swipes, engagement sur une mission, suivi dans « Mes engagements » et gestion des statuts.
+- Communautés : liste, page de détail, création/gestion des paramètres et suppression réservée aux personnes autorisées.
+- Discussions par mission : canaux de discussion associés aux missions et page « Mes discussions ».
+- Badges et gamification des contributions, avec page de classement.
+
+### Administration et e-mails
+
+- Centre d’administration avec tableau de bord, gestion des utilisateurs, des besoins et des communautés.
+- Suspension/réactivation des utilisateurs et suppression des communautés depuis les écrans d’administration.
+- Paramètres d’administration, configuration/test SMTP et réglages des notifications e-mail.
+- E-mails applicatifs et rappels planifiés via la route cron; les envois et erreurs sont journalisés dans le modèle `EmailLog`.
+
+### Pages, API et expérience web
+
+Pages publiques : `/`, `/connexion`, `/bienvenue`, `/cgu`, `/confidentialite`, `/cookies` et `/mentions-legales`. Pages authentifiées : `/app`, `/app/bienvenue`, `/app/profil`, `/app/besoins/nouveau`, `/app/besoins/[id]`, `/app/besoins/[id]/modifier`, `/app/mes-besoins`, `/app/mes-engagements`, `/app/communautes`, `/app/communautes/[id]`, `/app/communautes/[id]/parametres`, `/app/discussions` et `/app/classement`. Administration : `/app/admin`, `/app/admin/users`, `/app/admin/besoins`, `/app/admin/besoins/[id]` et `/admin`.
+
+Routes API présentes : `/api/auth/[...nextauth]`, `/api/health`, `/api/cron/reminders`, `/api/me/export`, `/api/rgpd/export` et `/api/admin/settings`.
+
+L’application est installable comme PWA via `public/manifest.webmanifest`, `public/icon.svg` et `public/sw.js`. Le service worker utilise un cache versionné et une stratégie réseau-avec-repli-hors-ligne pour les navigations.
+
+### Modèle de données
+
+Le schéma Prisma (`prisma/schema.prisma`) couvre notamment les utilisateurs, comptes/sessions Auth.js, communautés, membres de communautés, besoins récurrents, engagements, swipes, canaux/messages de discussion, badges et attributions de badges, notifications, paramètres SMTP et journaux d’e-mails. Les enums définissent les rôles, statuts et préférences utilisés par l’application.
+
+### Variables d’environnement
+
+En plus de `AUTH_URL`, `AUTH_SECRET`, `AUTH_TRUST_HOST`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `ADMIN_EMAIL` et `DATABASE_URL`, Compose utilise `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `NETWORK_NAME`, `CRON_SECRET`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` et `SMTP_FROM_NAME`. Les valeurs obligatoires sont contrôlées par Compose; les secrets ne doivent pas être commités. `NETWORK_NAME` doit désigner le réseau Docker externe partagé avec SWAG.
+
+### Structure du projet
+
+- `src/app/` : pages App Router, pages légales, pages applicatives, administration et routes API.
+- `src/components/` : menu utilisateur, inscription du service worker, SMTP et composants d’action.
+- `src/server/` : actions serveur et attribution des badges.
+- `src/lib/` : Prisma, session, validation, e-mail, administration et gamification.
+- `src/auth.ts`, `prisma/schema.prisma`, `public/`, `Dockerfile`, `docker-compose.yml` et `docker-entrypoint.sh` : authentification, données, PWA et déploiement.
+
+### Déploiement et redémarrage
+
+Compose applique `restart: unless-stopped` à `app`, `cron` et `db`. PostgreSQL possède un healthcheck `pg_isready`; l’application attend `service_healthy` et son entrypoint retente `prisma db push` jusqu’à 30 fois avec un délai de 2 secondes. Le réseau externe SWAG doit exister avant le déploiement, par exemple `docker network create <NETWORK_NAME>` si nécessaire.
+
+Sur l’hôte, activer Docker au démarrage (`sudo systemctl enable --now docker`), vérifier que Portainer démarre avec une politique de redémarrage, puis redéployer/recréer la stack depuis GitHub afin que Compose applique les nouvelles politiques et le nouvel entrypoint. Vérifier ensuite les logs `app` et `db` et l’endpoint `/api/health`.
