@@ -14,6 +14,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 FROM node:20-alpine AS runner
+ENV HOSTNAME=0.0.0.0
 RUN apk add --no-cache openssl
 WORKDIR /app
 RUN addgroup -S app && adduser -S app -G app
