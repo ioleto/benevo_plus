@@ -11,6 +11,7 @@ type Community = {
   latitude: number | null;
   longitude: number | null;
   _count: { members: number };
+  isMember?: boolean;
 };
 
 const escapeHtml = (value: string) =>
@@ -44,7 +45,7 @@ export default function CommunityMap({ communities }: { communities: Community[]
         L.marker([c.latitude as number, c.longitude as number])
           .addTo(instance)
           .bindPopup(
-            `<strong>${escapeHtml(c.name)}</strong><br>${members} membre${members > 1 ? "s" : ""}<br><a href="/app/communautes/${encodeURIComponent(c.id)}">Découvrir</a>`,
+            `<strong>${escapeHtml(c.name)}</strong><br>${c.isMember ? "⭐ Membre · " : ""}${members} membre${members > 1 ? "s" : ""}<br><a href="/app/communautes/${encodeURIComponent(c.id)}">Découvrir</a>`,
           );
       });
       const invalidate = () => instance.invalidateSize();
@@ -64,5 +65,5 @@ export default function CommunityMap({ communities }: { communities: Community[]
   if (!hasLocated) {
     return <p className="rounded-xl bg-slate-50 p-5 text-sm text-black/60">Aucune communauté avec coordonnées à afficher sur la carte.</p>;
   }
-  return <div ref={node} className="h-[420px] w-full" aria-label="Carte des communautés publiques" />;
+  return <div ref={node} className="h-[420px] w-full" aria-label="Carte des communautés" />;
 }
