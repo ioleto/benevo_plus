@@ -12,7 +12,13 @@ L’**Explorateur** (`/app/communautes`) permet de rechercher les communautés p
 
 ## Carte
 
-La carte de l’Explorateur affiche les communautés géolocalisées en France métropolitaine avec Leaflet et OpenStreetMap.
+La carte de l’Explorateur affiche les communautés géolocalisées en France métropolitaine avec Leaflet et OpenStreetMap. Elle inclut les communautés publiques et celles dont l’utilisateur est membre (y compris privées), signalées par « ⭐ Membre » ; la liste reste limitée aux communautés publiques non déjà rejointes/créées.
+
+### Persistance de la configuration SMTP
+
+La configuration SMTP saisie dans `/app/admin` est enregistrée dans la table `Setting`. Le mot de passe y est chiffré avec une clé dérivée de `AUTH_SECRET` (ou, pour les anciens déploiements, `NEXTAUTH_SECRET`). Cette variable doit être un secret fort, fixe et conservé dans les variables du déploiement : ne la régénérez pas à chaque build ou redéploiement. Compose la rend obligatoire et PostgreSQL utilise le volume nommé `db-data`, qui doit lui aussi être conservé.
+
+Si la clé a été changée ou si l’ancienne était absente, le mot de passe ne peut pas être récupéré : l’interface conserve les autres champs, signale le problème et demande de ressaisir le mot de passe. Le démarrage utilise `prisma db push --skip-generate` sans `--accept-data-loss`; vérifiez donc les sauvegardes et le volume PostgreSQL avant toute opération de schéma.
 
 ## Développement
 ```bash
@@ -74,7 +80,7 @@ Les entrées ci-dessous distinguent les échecs de validation explicitement sign
 | PR | Symptôme ou risque établi | Cause et correctif | Prévention |
 |---|---|---|---|
 | #7, #9, #10, #11, #12, #13, #14, #17, #18, #19, #20, #21 | Les validations locales `npm`/`npx` ne peuvent pas démarrer (`Cannot find module '../lib/cli.js'`) ou `npm ci` n’est pas exécutable. | Les descriptions de ces PR indiquent un exécutable npm cassé dans le sandbox et/ou l’absence de `package-lock.json`; la CI GitHub est la validation de référence. | Vérifier l’outil npm et le lockfile dans un environnement propre avant de conclure à une régression applicative. |
-| #16 → #17 | Régression de marque : le header/menu ne conservait plus le rendu attendu du logo ou du libellé Bénévo+. | #16 remplace le logo du menu desktop par `/icon.svg`; #17 restaure la marque textuelle « Bénévo+ » dans les layouts tout en conservant l’icône du menu. | Vérifier les deux layouts et `UserMenu.tsx` ensemble; rechercher les occurrences de logo/cœur avant le build. |
+| #16 → #17 | Régression de marque : le header/menu ne conservait plus le rendu attendu du logo ou du libellé Bénévo+. | #16 remplace le logo du menu desktop par `/icon.svg`; #17 restaure la marque textuelle « Bénévo+ » dans les layouts tout en conservant l’icône du menu. | Vérifier les deux layouts et `UserMenu.tsx` ensemble; rechercher les occurrences de logo/cœur avant le push. |
 | #17 | L’accès `/app/admin` pouvait répondre 404 pour l’administrateur configuré. | Le code ne lisait que `ADMIN_EMAILS`, alors que Compose et `.env.example` exposaient `ADMIN_EMAIL`; #17 centralise la compatibilité, normalise la comparaison et réévalue le rôle à chaque session. | Tester les deux noms de variable (`ADMIN_EMAIL` et `ADMIN_EMAILS`) et une adresse avec casse/espaces variables. |
 | #19 → #21 | Deux en-têtes apparaissaient sur les routes connectées. | #19 avait ajouté un shell/header connecté dans le layout racine alors que `src/app/app/layout.tsx` en possédait déjà un; #21 supprime le doublon et conserve le header du layout `/app`. | Cartographier les layouts imbriqués et vérifier visuellement une route publique et une route `/app`. |
 | #19 → #20 | Les styles globaux pouvaient disparaître après la modification du layout racine. | L’import de `globals.css` avait été perdu; #20 le restaure dans le layout racine et transmet les props attendues à `UserMenu`. | Après toute réécriture de layout, vérifier l’import CSS global et lancer le build Next.js. |
