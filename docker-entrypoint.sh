@@ -42,4 +42,5 @@ while :; do
 done
 
 echo "[benevo+] Démarrage sur le port ${PORT:-3000}"
+export HOSTNAME=0.0.0.0
 exec node server.js

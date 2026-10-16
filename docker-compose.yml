@@ -8,6 +8,7 @@ services:
       db:
         condition: service_healthy
     environment:
+      HOSTNAME: 0.0.0.0
       AUTH_URL: ${AUTH_URL:-https://benevo.ioleto.fr}
       AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET requis}
       AUTH_TRUST_HOST: "true"

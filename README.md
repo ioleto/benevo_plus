@@ -23,6 +23,14 @@ npm run dev
 
 ### Autocomplétion ville et carte
 
+## Erreurs connues
+
+### Production : `502 Bad Gateway` et serveur lié à l’identifiant du conteneur
+
+- **Symptôme :** le reverse proxy renvoie `502 Bad Gateway` et les logs Next.js standalone affichent `Local: http://<id-du-conteneur>:3000` (par exemple `http://0882300b0329:3000`) au lieu de `0.0.0.0`.
+- **Cause :** Docker fournit l’identifiant du conteneur dans la variable `HOSTNAME`. Next.js standalone l’utilise alors comme adresse d’écoute, ce qui empêche nginx/SWAG d’atteindre le serveur depuis l’extérieur du conteneur.
+- **Correctif :** forcer `HOSTNAME=0.0.0.0` dans l’étape runner du `Dockerfile`, dans `docker-compose.yml` pour le service `app`, et juste avant le lancement de `node server.js` dans `docker-entrypoint.sh`, puis reconstruire et redémarrer l’image.
+
 ## Erreurs connues de la CI
 
 ### Sandbox : `Cannot find module ../lib/cli.js` avec npm
@@ -37,9 +45,7 @@ npm run dev
 - **Cause :** avec la sortie Next.js `standalone`, le runner ne reçoit pas automatiquement la CLI Prisma (`node_modules/prisma`) ni tous ses fichiers/runtime engines. L’échec de la CLI était auparavant interprété à tort comme une base PostgreSQL pas encore prête.
 - **Correctif :** copier explicitement `prisma`, `@prisma`, `.prisma`, `.bin` et le dossier `prisma/` depuis l’étape `builder`, puis vérifier la CLI au démarrage et ne réessayer que les erreurs de connexion PostgreSQL.
 - **Prévention :** ne pas se limiter à `docker build` ; lancer l’image avec `docker run` (ou `docker compose up`) et vérifier que l’entrée exécute `prisma db push` puis démarre le serveur.
-
 Cette section récapitule les problèmes rencontrés dans l’historique réel de la PR **#22** et leurs correctifs.
-
 | Symptôme | Cause | Correctif | Prévention |
 |---|---|---|---|
 | Le build Docker/CI échoue lors de `npm ci`. | Le dépôt ne contient pas de `package-lock.json`, alors que `npm ci` l’exige. | La CI et le `Dockerfile` utilisent `npm install` (commit `994d712`, « Fix CI sans lock et dépendances Leaflet »). | Si le projet repasse à `npm ci`, générer puis committer `package-lock.json`. |
@@ -52,12 +58,9 @@ Cette section récapitule les problèmes rencontrés dans l’historique réel d
 
 - `@next/next/no-img-element` peut signaler l’utilisation de `<img>`.
 - `no-unused-vars` peut signaler `getSetting` ou `settingString` dans `actions.ts`.
-- npm peut afficher une notice indiquant qu’une nouvelle version est disponible.
-
-Ces avertissements ne bloquent pas la CI lorsqu’ils ne sont pas configurés comme des erreurs.
+- npm peut afficher une notice indiquant qu’une nouvelle version est disponible. Ces avertissements ne bloquent pas la CI lorsqu’ils ne sont pas configurés comme des erreurs.
 
 ### Checklist avant push
-
 ```bash
 npm run typecheck
 npm run lint
@@ -68,7 +71,6 @@ npx prisma validate
 ## Compléments issus des PR #1 à #21
 
 Les entrées ci-dessous distinguent les échecs de validation explicitement signalés des régressions d’intégration qui ont nécessité un correctif. Les numéros de PR sont les références vérifiables dans l’historique ; aucune erreur n’est ajoutée lorsque la PR ne fournit pas de symptôme de CI/build.
-
 | PR | Symptôme ou risque établi | Cause et correctif | Prévention |
 |---|---|---|---|
 | #7, #9, #10, #11, #12, #13, #14, #17, #18, #19, #20, #21 | Les validations locales `npm`/`npx` ne peuvent pas démarrer (`Cannot find module '../lib/cli.js'`) ou `npm ci` n’est pas exécutable. | Les descriptions de ces PR indiquent un exécutable npm cassé dans le sandbox et/ou l’absence de `package-lock.json`; la CI GitHub est la validation de référence. | Vérifier l’outil npm et le lockfile dans un environnement propre avant de conclure à une régression applicative. |
@@ -83,6 +85,6 @@ Les entrées ci-dessous distinguent les échecs de validation explicitement sign
 
 ### Références de regroupement
 
-- Les régressions de fichiers/layouts entiers sont documentées avec leurs correctifs dans les PR **#19–#22**; elles complètent l’erreur de fichier tronqué déjà listée ci-dessus.
+- Les régressions de fichiers/layouts entiers sont documentées avec leurs correctifs dans les PR **#19–#22** ; elles complètent l’erreur de fichier tronqué déjà listée ci-dessus.
 - Les sujets récurrents « admin », « SMTP », « Docker/Compose » et « marque/header » sont regroupés par chaîne de régression plutôt que répétés comme des erreurs indépendantes.
 - Les PR **#1** et **#2** ont des checks GitHub réussis dans l’historique consulté; cela ne constitue pas une preuve d’échec CI pour ces PR.
