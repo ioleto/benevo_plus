@@ -1,17 +1,14 @@
 #!/bin/sh
 set -eu
-
-# Compose démarre désormais l'app dès que le conteneur DB est lancé. PostgreSQL
-# et/ou Prisma peuvent néanmoins rester indisponibles après un reboot. Boucler
-# sans limite évite que le conteneur sorte définitivement sur une panne transitoire.
+prisma_cli="/app/node_modules/prisma/build/index.js"
+[ -f "$prisma_cli" ] || { echo "[benevo+] Prisma CLI introuvable" >&2; exit 1; }
+[ -d /app/node_modules/@prisma ] && [ -d /app/node_modules/.prisma ] || { echo "[benevo+] Runtime Prisma incomplet" >&2; exit 1; }
 while :; do
-  echo "[benevo+] Synchronisation du schéma de base de données..."
-  if node node_modules/prisma/build/index.js db push --skip-generate; then
-    break
-  fi
-  echo "[benevo+] PostgreSQL ou la migration n'est pas prête; nouvel essai dans 5 s..." >&2
-  sleep 5
+  output=$(mktemp)
+  if node scripts/baseline-migrations.js >"$output" 2>&1 && node "$prisma_cli" migrate deploy >>"$output" 2>&1; then cat "$output"; rm -f "$output"; break; fi
+  status=$?; cat "$output" >&2
+  if ! grep -Eq 'P1001|P1002|P1017|ECONNREFUSED|ECONNRESET|ETIMEDOUT|Connection refused|database system is starting up' "$output"; then rm -f "$output"; exit "$status"; fi
+  rm -f "$output"; echo "[benevo+] PostgreSQL indisponible, nouvel essai dans 2 s..." >&2; sleep 2
 done
-
-echo "[benevo+] Démarrage sur le port ${PORT:-3000}"
+export HOSTNAME=0.0.0.0
 exec node server.js
