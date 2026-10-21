@@ -5,11 +5,9 @@ services:
     container_name: benevo-plus
     restart: always
     depends_on:
-      db:
-        # Le script d'entrée attend réellement PostgreSQL et réessaie aussi
-        # les migrations : ne pas bloquer le lancement sur un healthcheck expiré.
-        condition: service_started
+      db: { condition: service_healthy }
     environment:
+      HOSTNAME: 0.0.0.0
       AUTH_URL: ${AUTH_URL:-https://benevo.ioleto.fr}
       AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET requis}
       AUTH_TRUST_HOST: "true"
@@ -32,11 +30,8 @@ services:
     restart: always
     entrypoint: ["/bin/sh", "-c"]
     command: ["while true; do sleep 300; curl -fsS -X POST -H \"Authorization: Bearer $$CRON_SECRET\" http://app:3000/api/cron/reminders || true; done"]
-    environment:
-      CRON_SECRET: ${CRON_SECRET:?CRON_SECRET requis}
-    depends_on:
-      app:
-        condition: service_started
+    environment: { CRON_SECRET: ${CRON_SECRET:?CRON_SECRET requis} }
+    depends_on: [app]
     networks: [internal]
   db:
     image: postgres:16-alpine
@@ -52,12 +47,24 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
     networks: [internal]
-volumes:
-  db-data:
+  backup:
+    image: postgres:16-alpine
+    container_name: benevo-plus-backup
+    restart: always
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: ${POSTGRES_USER:-benevo}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requis}
+      PGDATABASE: ${POSTGRES_DB:-benevo}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+    volumes: ["./backups:/backups"]
+    depends_on: { db: { condition: service_healthy } }
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["while true; do f=/backups/benevo-$$(date -u +%Y%m%dT%H%M%SZ).dump; pg_dump -Fc -f \"$$f\" && find /backups -type f -name 'benevo-*.dump' -mtime +$$BACKUP_RETENTION_DAYS -delete; sleep 86400; done"]
+    networks: [internal]
+volumes: { db-data: }
 networks:
   internal:
-  swag:
-    external: true
-    name: ${NETWORK_NAME:?NETWORK_NAME requis}
+  swag: { external: true, name: ${NETWORK_NAME:?NETWORK_NAME requis} }
