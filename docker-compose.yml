@@ -3,14 +3,14 @@ services:
   app:
     build: .
     container_name: benevo-plus
-    restart: unless-stopped
+    restart: always
     depends_on:
       db:
-        condition: service_healthy
+        # Le script d'entrée attend réellement PostgreSQL et réessaie aussi
+        # les migrations : ne pas bloquer le lancement sur un healthcheck expiré.
+        condition: service_started
     environment:
-      HOSTNAME: 0.0.0.0
       AUTH_URL: ${AUTH_URL:-https://benevo.ioleto.fr}
-      # Stable across rebuilds: used as the SMTP password encryption key.
       AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET requis}
       AUTH_TRUST_HOST: "true"
       AUTH_GOOGLE_ID: ${AUTH_GOOGLE_ID:?AUTH_GOOGLE_ID requis}
@@ -29,17 +29,19 @@ services:
   cron:
     image: curlimages/curl:8.10.1
     container_name: benevo-plus-cron
-    restart: unless-stopped
+    restart: always
     entrypoint: ["/bin/sh", "-c"]
     command: ["while true; do sleep 300; curl -fsS -X POST -H \"Authorization: Bearer $$CRON_SECRET\" http://app:3000/api/cron/reminders || true; done"]
     environment:
       CRON_SECRET: ${CRON_SECRET:?CRON_SECRET requis}
-    depends_on: [app]
+    depends_on:
+      app:
+        condition: service_started
     networks: [internal]
   db:
     image: postgres:16-alpine
     container_name: benevo-plus-db
-    restart: unless-stopped
+    restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-benevo}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requis}
@@ -50,6 +52,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
     networks: [internal]
 volumes:
   db-data:
